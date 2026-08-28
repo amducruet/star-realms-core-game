@@ -2,6 +2,9 @@
 
 A multiplayer deck-building card game inspired by Star Realms.
 
+<img width="1724" height="954" alt="UI" src="https://github.com/user-attachments/assets/83c38aa4-71d1-4227-9f92-4be462b9265b" />
+
+
 ## Tech Stack
 
 ### Backend
