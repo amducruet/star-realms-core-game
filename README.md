@@ -26,26 +26,8 @@ A multiplayer deck-building card game inspired by Star Realms.
 - Real-time updates via WebSockets
 - Card data imported from Excel
 
-## Development Phases
-
-### Phase 1: Core Gameplay
-- [x] Project setup
-- [x] Card data import and models
-- [x] Game state management
-- [x] Turn flow and rules engine
-- [x] WebSocket communication
-- [x] Basic UI
-- [x] Simple AIopponent (basic)
-
-### Phase 2: Animations & Polish
-- [ ] Card play animations
-- [ ] Draw/discard effects
-- [ ] Damage and scrap animations
-- [ ] UI polish
-- [ ] Sound effects (optional)
 
 ## Running Locally
-
 ### Backend
 ```bash
 cd backend
