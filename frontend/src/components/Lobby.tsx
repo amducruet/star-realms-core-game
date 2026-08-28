@@ -11,6 +11,31 @@ interface LobbyProps {
 
 export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
   const [tab, setTab] = useState<'create' | 'join'>('create');
+  const [copied, setCopied] = useState(false);
+
+  const copyGameCode = (code: string) => {
+    const doFallback = () => {
+      const el = document.createElement('textarea');
+      el.value = code;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(doFallback);
+    } else {
+      doFallback();
+    }
+  };
   const [playerName, setPlayerName] = useState('');
   const [joinGameId, setJoinGameId] = useState('');
   const [aiCount, setAiCount] = useState(1);
@@ -66,19 +91,8 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
             <div className="game-code-box">
               <span className="game-code-label">Game Code</span>
               <span className="game-code">{gameState.game_id}</span>
-              <button className="btn-copy" onClick={() => {
-                if (navigator.clipboard) {
-                  navigator.clipboard.writeText(gameState.game_id);
-                } else {
-                  const el = document.createElement('textarea');
-                  el.value = gameState.game_id;
-                  document.body.appendChild(el);
-                  el.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(el);
-                }
-              }}>
-                Copy
+              <button className="btn-copy" onClick={() => copyGameCode(gameState.game_id)}>
+                {copied ? '✓ Copied!' : 'Copy'}
               </button>
             </div>
             <p className="game-code-hint">Share this code so others can join</p>
@@ -136,10 +150,12 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
               <div className="form-group">
                 <label>AIOpponents</label>
                 <select value={aiCount} onChange={e => setAiCount(Number(e.target.value))} disabled={loading}>
-                  <option value={0}>0 AI(humans only)</option>
+                  <option value={0}>0 AI (humans only)</option>
                   <option value={1}>1 AI</option>
                   <option value={2}>2 AI</option>
                   <option value={3}>3 AI</option>
+                  <option value={4}>4 AI</option>
+                  <option value={5}>5 AI</option>
                 </select>
               </div>
               <div className="form-group">

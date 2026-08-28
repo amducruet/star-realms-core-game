@@ -11,7 +11,8 @@ export function useWebSocket(gameId: string | null, onMessage: (message: WSMessa
   useEffect(() => {
     if (!gameId) return;
 
-    const wsUrl = `ws://${window.location.host}/api/ws/${gameId}`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${wsProtocol}://${window.location.host}/api/ws/${gameId}`;
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {

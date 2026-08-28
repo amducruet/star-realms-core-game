@@ -50,7 +50,7 @@ export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, o
           )}
           <div className={`combat-cards${launching ? ' fleet-launching' : ''}`} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
             {[...currentPlayer.in_play, ...currentPlayer.hand].map((card, i) => (
-              <Card key={card.instance_id} card={card} showScrapButton={isMyTurn} onScrap={() => onScrapCard(card)} enterIndex={i} />
+              <Card key={card.instance_id} card={card} small showScrapButton={isMyTurn} onScrap={() => onScrapCard(card)} enterIndex={i} />
             ))}
           </div>
         </div>

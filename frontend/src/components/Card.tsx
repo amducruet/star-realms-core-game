@@ -114,6 +114,7 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
             </span>
           )}
         </div>
+        {card.is_outpost && <span className="card-outpost-badge">OUTPOST</span>}
       </div>
 
       {/* Info panel: stats | divider | abilities */}
