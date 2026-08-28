@@ -1,0 +1,103 @@
+.card-picker {
+  background: #1a1a2e;
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 480px;
+  max-width: 640px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.card-picker h2 {
+  margin: 0 0 8px;
+  color: #ffd700;
+  text-align: center;
+  font-size: 22px;
+}
+
+.card-picker-subtitle {
+  text-align: center;
+  color: #aaa;
+  font-size: 14px;
+  margin-AItom: 20px;
+}
+
+.card-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  margin-AItom: 20px;
+}
+
+.card-picker-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-picker-item:hover {
+  background: rgba(255, 215, 0, 0.1);
+  border-color: #ffd700;
+}
+
+.card-picker-item-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.card-picker-item-meta {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.card-picker-item-text {
+  font-size: 12px;
+  color: #ccc;
+  margin-top: 4px;
+  white-space: pre-wrap;
+}
+
+.card-picker-empty {
+  text-align: center;
+  color: #888;
+  padding: 24px;
+  font-style: italic;
+}
+
+.card-picker-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-picker-actions button {
+  flex: 1;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid;
+  transition: all 0.2s;
+}
+
+.btn-skip {
+  background: transparent;
+  border-color: #888;
+  color: #888;
+}
+
+.btn-skip:hover {
+  background: rgba(136, 136, 136, 0.2);
+  border-color: #aaa;
+  color: #aaa;
+}

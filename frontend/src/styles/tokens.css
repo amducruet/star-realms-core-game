@@ -1,0 +1,32 @@
+:root {
+  /* Factions */
+  --faction-blob: #22c55e;
+  --faction-blob-bg: rgba(34, 197, 94, 0.15);
+  --faction-trade: #3b82f6;
+  --faction-trade-bg: rgba(59, 130, 246, 0.15);
+  --faction-machine: #ef4444;
+  --faction-machine-bg: rgba(239, 68, 68, 0.15);
+  --faction-empire: #eab308;
+  --faction-empire-bg: rgba(234, 179, 8, 0.15);
+  --faction-unaligned: #6b7280;
+  --faction-unaligned-bg: rgba(107, 114, 128, 0.15);
+
+  /* Space background */
+  --space-deep: #030712;
+  --space-mid: #0f172a;
+  --space-nebula-1: rgba(99, 38, 186, 0.08);
+  --space-nebula-2: rgba(14, 116, 144, 0.06);
+
+  /* UI surfaces */
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-muted: rgba(255, 255, 255, 0.5);
+
+  /* Card */
+  --card-width: 160px;
+  --card-radius: 10px;
+}

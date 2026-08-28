@@ -1,0 +1,330 @@
+@import './tokens.css';
+
+/* ── Base card ─────────────────────────────────────────── */
+.card {
+  width: 220px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: #0d1b2a;
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.card-clickable { cursor: pointer; }
+.card-clickable:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Faction border colors */
+.card-green  { border-color: #22c55e; }
+.card-blue   { border-color: #3b82f6; }
+.card-red    { border-color: #ef4444; }
+.card-yellow { border-color: #fbbf24; }
+.card-gray   { border-color: #6b7280; }
+
+.card-green:hover  { box-shadow: 0 10px 20px rgba(34,  197, 94,  0.35); }
+.card-blue:hover   { box-shadow: 0 10px 20px rgba(59,  130, 246, 0.35); }
+.card-red:hover    { box-shadow: 0 10px 20px rgba(239, 68,  68,  0.35); }
+.card-yellow:hover { box-shadow: 0 10px 20px rgba(251, 191, 36,  0.35); }
+
+/* ── Art area ──────────────────────────────────────────── */
+.card-art {
+  position: relative;
+  height: 195px;
+  overflow: hidden;
+}
+
+/* Faction gradient fallback (shows when image is absent / errors) */
+.card-art--green  { background: linear-gradient(160deg, #052e16 0%, #166534 100%); }
+.card-art--blue   { background: linear-gradient(160deg, #0c1445 0%, #1d4ed8 100%); }
+.card-art--red    { background: linear-gradient(160deg, #2d0a0a 0%, #991b1b 100%); }
+.card-art--yellow { background: linear-gradient(160deg, #1c1400 0%, #92400e 100%); }
+.card-art--gray   { background: linear-gradient(160deg, #111827 0%, #4b5563 100%); }
+
+.card-art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+/* ── Name / cost overlay ───────────────────────────────── */
+.card-name-overlay {
+  position: absolute;
+  AItom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+  padding: 1.2rem 0.5rem 0.35rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.card-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-cost-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 215, 0, 0.85);
+  color: #111;
+  border-radius: 10px;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Info panel ────────────────────────────────────────── */
+.card-info {
+  display: grid;
+  grid-template-columns: 42px 1px 1fr;
+  min-height: 56px;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 0.35rem;
+  gap: 0.3rem;
+}
+
+.card-stats-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.card-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.card-stat--combat   { color: #f87171; }
+.card-stat--trade    { color: #fbbf24; }
+.card-stat--authority { color: #4ade80; }
+.card-stat--defense  { color: #93c5fd; }
+
+.card-stat-empty { flex: 1; }
+
+/* When only stats, no text — fill the full panel in a centered row */
+.card-info--stats-only {
+  grid-template-columns: 1fr;
+}
+
+.card-info--stats-only .card-stats-col {
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.card-info--stats-only .card-stat {
+  font-size: 1rem;
+}
+
+.card-info--stats-only .card-info-divider,
+.card-info--stats-only .card-abilities {
+  display: none;
+}
+
+.card-compact .card-info--stats-only .card-stat {
+  font-size: 0.8rem;
+}
+
+/* When no stats at all — center text across full width */
+.card-info--no-stats {
+  grid-template-columns: 1fr;
+}
+
+.card-info--no-stats .card-stats-col,
+.card-info--no-stats .card-info-divider {
+  display: none;
+}
+
+.card-info--no-stats .card-abilities {
+  text-align: center;
+  align-items: center;
+}
+
+.card-info-divider {
+  background: rgba(255, 255, 255, 0.12);
+  width: 1px;
+  align-self: stretch;
+}
+
+/* ── Abilities ─────────────────────────────────────────── */
+.card-abilities {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow: hidden;
+}
+
+.card-ability {
+  font-size: 0.63rem;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.card-ability--primary {
+  font-weight: 600;
+  color: #fff;
+}
+
+.card-ability--ally,
+.card-ability--double_ally {
+  border-left: 2px solid #fbbf24;
+  padding-left: 3px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-ability--scrap {
+  border-left: 2px solid #ef4444;
+  padding-left: 3px;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+}
+
+.card-ability--paid {
+  border-left: 2px solid #3b82f6;
+  padding-left: 3px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-ability-label {
+  font-weight: 700;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.75;
+  margin-right: 3px;
+}
+
+.card-ability-text { }
+
+/* ── Count badge ───────────────────────────────────────── */
+.card-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #667eea;
+  color: white;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Scrap button ──────────────────────────────────────── */
+.btn-scrap {
+  position: absolute;
+  AItom: 6px;
+  right: 6px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  padding: 0.3rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-scrap:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+}
+
+/* ── Small (in-play bases) ─────────────────────────────── */
+.card-small {
+  width: 160px;
+}
+
+.card-small .card-art {
+  height: 130px;
+}
+
+.card-small .card-name {
+  font-size: 0.65rem;
+}
+
+.card-small .card-info {
+  grid-template-columns: 34px 1px 1fr;
+  min-height: 48px;
+  padding: 0.28rem;
+}
+
+.card-small .card-stat {
+  font-size: 0.72rem;
+}
+
+.card-small .card-ability {
+  font-size: 0.58rem;
+}
+
+/* ── Compact (trade row) ───────────────────────────────── */
+.card-compact {
+  width: 180px;
+}
+
+.card-compact .card-art {
+  height: 90px;
+}
+
+.card-compact .card-name {
+  font-size: 0.65rem;
+}
+
+.card-compact .card-cost-badge {
+  font-size: 0.62rem;
+  padding: 1px 4px;
+}
+
+.card-compact .card-info {
+  grid-template-columns: 34px 1px 1fr;
+  min-height: 46px;
+  padding: 0.28rem;
+}
+
+.card-compact .card-stat {
+  font-size: 0.72rem;
+}
+
+.card-compact .card-ability {
+  font-size: 0.6rem;
+}
+
+.card-compact .card-ability-label {
+  font-size: 0.54rem;
+}
+
+.card-compact .card-faction-dot {
+  width: 8px;
+  height: 8px;
+}

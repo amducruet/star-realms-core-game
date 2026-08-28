@@ -1,0 +1,69 @@
+.space-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--space-deep);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Stars via box-shadow — one element, many shadows */
+.space-stars {
+  position: absolute;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.space-stars--small {
+  width: 1px;
+  height: 1px;
+  box-shadow:
+    120px 240px #fff, 340px 80px #fff, 560px 300px #ddd, 780px 150px #fff,
+    900px 420px #ccc, 1050px 60px #fff, 1200px 350px #ddd, 1350px 200px #fff,
+    200px 500px #ccc, 450px 620px #fff, 680px 480px #ddd, 830px 580px #fff,
+    1000px 700px #ccc, 1150px 550px #fff, 1300px 650px #ddd, 80px 750px #fff,
+    310px 820px #ccc, 530px 900px #fff, 760px 860px #ddd, 980px 780px #fff,
+    1180px 850px #ccc, 50px 950px #fff, 270px 1020px #ddd, 490px 980px #fff,
+    720px 1050px #ccc, 940px 920px #fff, 1100px 1000px #ddd, 1250px 940px #fff;
+  animation: space-drift 120s linear infinite;
+}
+
+.space-stars--medium {
+  width: 2px;
+  height: 2px;
+  box-shadow:
+    190px 130px rgba(255,255,255,0.7), 430px 410px rgba(255,255,255,0.6),
+    650px 230px rgba(200,220,255,0.7), 870px 500px rgba(255,255,255,0.5),
+    1020px 170px rgba(255,255,255,0.7), 1220px 440px rgba(200,220,255,0.6),
+    380px 680px rgba(255,255,255,0.5), 600px 760px rgba(255,255,255,0.7),
+    820px 640px rgba(200,220,255,0.6), 1080px 820px rgba(255,255,255,0.5),
+    140px 880px rgba(255,255,255,0.7), 360px 960px rgba(200,220,255,0.6);
+  animation: space-drift 180s linear infinite reverse;
+}
+
+@keyframes space-drift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-40px); }
+}
+
+.space-nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+}
+
+.space-nebula--1 {
+  width: 600px;
+  height: 400px;
+  top: 10%;
+  left: 20%;
+  background: var(--space-nebula-1);
+}
+
+.space-nebula--2 {
+  width: 500px;
+  height: 350px;
+  AItom: 15%;
+  right: 15%;
+  background: var(--space-nebula-2);
+}

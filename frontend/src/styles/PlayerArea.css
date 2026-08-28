@@ -1,0 +1,121 @@
+/* Player area styles */
+.player-area {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.player-area.active-player {
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+}
+
+.player-area.opponent {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.player-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-AItom: 1rem;
+  padding-AItom: 1rem;
+  border-AItom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.player-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.turn-indicator {
+  color: #22c55e;
+  font-size: 1.5rem;
+}
+
+.player-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.player-stats span {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.authority {
+  background: rgba(239, 68, 68, 0.2) !important;
+}
+
+.combat {
+  background: rgba(239, 68, 68, 0.3) !important;
+}
+
+.trade {
+  background: rgba(234, 179, 8, 0.2) !important;
+}
+
+.deck-count,
+.discard-count {
+  background: rgba(107, 114, 128, 0.2) !important;
+}
+
+.btn-attack {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  white-space: nowrap;
+}
+
+.btn-attack:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.player-bases,
+.player-in-play,
+.player-hand {
+  margin-top: 1rem;
+}
+
+.player-bases h4,
+.player-in-play h4,
+.player-hand h4 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-AItom: 0.75rem;
+  opacity: 0.8;
+}
+
+.player-hand .card-list {
+  justify-content: center;
+}
+
+.outpost-warning {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+  font-weight: 700;
+}
+
+.player-bases .card.card-clickable {
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+.player-bases .card.card-clickable:hover {
+  border-color: #dc2626;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+  transform: translateY(-4px);
+}

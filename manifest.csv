@@ -1,0 +1,92 @@
+set,type,name,faction,image_url,local_file
+Frontiers,Ship,Blob Alpha,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_BlobAlpha-214x300.jpg,star_realms_assets/frontiers/blob/blob_alpha.jpg
+Frontiers,Ship,Blob Miner,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_BlobMiner-214x300.jpg,star_realms_assets/frontiers/blob/blob_miner.jpg
+Frontiers,Ship,Burrower,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_Burrower-214x300.jpg,star_realms_assets/frontiers/blob/burrower.jpg
+Frontiers,Ship,Crusher,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_Crusher-214x300.jpg,star_realms_assets/frontiers/blob/crusher.jpg
+Frontiers,Ship,Hive Queen,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_HiveQueen-214x300.jpg,star_realms_assets/frontiers/blob/hive_queen.jpg
+Frontiers,Base,Infested Moon,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_InfestedMoon-300x214.jpg,star_realms_assets/frontiers/blob/infested_moon.jpg
+Frontiers,Ship,Moonwurm Hatchling,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_MoonwurmHatchling-214x300.jpg,star_realms_assets/frontiers/blob/moonwurm_hatchling.jpg
+Frontiers,Base,Nesting Ground,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_NestingGround-300x214.jpg,star_realms_assets/frontiers/blob/nesting_ground.jpg
+Frontiers,Ship,Pulverizer,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_Pulverizer-214x300.jpg,star_realms_assets/frontiers/blob/pulverizer.jpg
+Frontiers,Base,Spike Cluster,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_SpikeCluster-300x214.jpg,star_realms_assets/frontiers/blob/spike_cluster.jpg
+Frontiers,Ship,Stinger,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_Stinger-214x300.jpg,star_realms_assets/frontiers/blob/stinger.jpg
+Frontiers,Base,Swarm Cluster,Blob,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_SwarmCluster-300x214.jpg,star_realms_assets/frontiers/blob/swarm_cluster.jpg
+Frontiers,Ship,Builder AI,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_BuilderAI-214x300.jpg,star_realms_assets/frontiers/machine_cult/builder_AI.jpg
+Frontiers,Base,Conversion Yard,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_ConversionYard-300x214.jpg,star_realms_assets/frontiers/machine_cult/conversion_yard.jpg
+Frontiers,Base,Defense System,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_DefenseSystem-300x214.jpg,star_realms_assets/frontiers/machine_cult/defense_system.jpg
+Frontiers,Ship,Destroyer AI,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_DestroyerAI-214x300.jpg,star_realms_assets/frontiers/machine_cult/destroyer_AI.jpg
+Frontiers,Ship,Enforcer Mech,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_EnforcerMech-214x300.jpg,star_realms_assets/frontiers/machine_cult/enforcer_mech.jpg
+Frontiers,Base,Integration Port,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_IntegrationPort-300x214.jpg,star_realms_assets/frontiers/machine_cult/integration_port.jpg
+Frontiers,Ship,NanoAI Swarm,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_NanoAISwarm-214x300.jpg,star_realms_assets/frontiers/machine_cult/nanoAI_swarm.jpg
+Frontiers,Base,Neural Nexus,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_NeuralNexus-300x214.jpg,star_realms_assets/frontiers/machine_cult/neural_nexus.jpg
+Frontiers,Ship,Plasma AI,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_PlasmaAI-214x300.jpg,star_realms_assets/frontiers/machine_cult/plasma_AI.jpg
+Frontiers,Base,Reclamation Station,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_ReclamationStation-300x214.jpg,star_realms_assets/frontiers/machine_cult/reclamation_station.jpg
+Frontiers,Ship,Repair Mech,Machine Cult,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_RepairMech-214x300.jpg,star_realms_assets/frontiers/machine_cult/repair_mech.jpg
+Frontiers,Base,Captured Outpost,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_CapturedOutpost-300x214.jpg,star_realms_assets/frontiers/star_empire/captured_outpost.jpg
+Frontiers,Ship,Cargo Craft,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_CargoCraft-214x300.jpg,star_realms_assets/frontiers/star_empire/cargo_craft.jpg
+Frontiers,Ship,Farm Ship,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_FarmShip-214x300.jpg,star_realms_assets/frontiers/star_empire/farm_ship.jpg
+Frontiers,Ship,Frontier Hawk,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_FrontierHawk-214x300.jpg,star_realms_assets/frontiers/star_empire/frontier_hawk.jpg
+Frontiers,Ship,Hammerhead,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_Hammerhead-214x300.jpg,star_realms_assets/frontiers/star_empire/hammerhead.jpg
+Frontiers,Ship,Imperial Flagship,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_ImperialFlagship-214x300.jpg,star_realms_assets/frontiers/star_empire/imperial_flagship.jpg
+Frontiers,Base,Jamming Terminal,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_JammingTerminal-300x214.jpg,star_realms_assets/frontiers/star_empire/jamming_terminal.jpg
+Frontiers,Ship,Light Cruiser,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_LightCruiser-214x300.jpg,star_realms_assets/frontiers/star_empire/light_cruiser.jpg
+Frontiers,Base,Orbital Gun Platform,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_OrbitalGunPlatform-300x214.jpg,star_realms_assets/frontiers/star_empire/orbital_gun_platform.jpg
+Frontiers,Base,Siege Fortress,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_SiegeFortress-300x214.jpg,star_realms_assets/frontiers/star_empire/siege_fortress.jpg
+Frontiers,Ship,Warpgate Cruiser,Star Empire,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_WarpgateCruiser-214x300.jpg,star_realms_assets/frontiers/star_empire/warpgate_cruiser.jpg
+Frontiers,Ship,Federation Battleship,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_FederationBattleship-214x300.jpg,star_realms_assets/frontiers/trade_federation/federation_battleship.jpg
+Frontiers,Ship,Federation Cruiser,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_FederationCruiser-214x300.jpg,star_realms_assets/frontiers/trade_federation/federation_cruiser.jpg
+Frontiers,Ship,Frontier Runner,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_FrontierRunner-214x300.jpg,star_realms_assets/frontiers/trade_federation/frontier_runner.jpg
+Frontiers,Ship,Gateship,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_Gateship-214x300.jpg,star_realms_assets/frontiers/trade_federation/gateship.jpg
+Frontiers,Base,Ion Station,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_IonStation-300x214.jpg,star_realms_assets/frontiers/trade_federation/ion_station.jpg
+Frontiers,Ship,Long Hauler,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_LongHauler-214x300.jpg,star_realms_assets/frontiers/trade_federation/long_hauler.jpg
+Frontiers,Base,Mobile Market,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_MobileMarket-300x214.jpg,star_realms_assets/frontiers/trade_federation/mobile_market.jpg
+Frontiers,Ship,Orbital Shuttle,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_OrbitalShuttle-214x300.jpg,star_realms_assets/frontiers/trade_federation/orbital_shuttle.jpg
+Frontiers,Base,Outland Station,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_OutlandStation-300x214.jpg,star_realms_assets/frontiers/trade_federation/outland_station.jpg
+Frontiers,Ship,Patrol Boat,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_PatrolBoat-214x300.jpg,star_realms_assets/frontiers/trade_federation/patrol_boat.jpg
+Frontiers,Base,Transit Nexus,Trade Federation,https://www.starrealms.com/wp-content/uploads/2018/10/SRFRN_Card_TransitNexus-300x214.jpg,star_realms_assets/frontiers/trade_federation/transit_nexus.jpg
+Core Set,Ship,Battle Blob,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Battle-Blob-214x300.jpg,star_realms_assets/core/blob/battle_blob.jpg
+Core Set,Ship,Battle Pod,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/BattlePod-214x300.jpg,star_realms_assets/core/blob/battle_pod.jpg
+Core Set,Ship,Blob Carrier,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Blob-Carrier-214x300.jpg,star_realms_assets/core/blob/blob_carrier.jpg
+Core Set,Ship,Blob Destroyer,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Blob-Destroyer-214x300.jpg,star_realms_assets/core/blob/blob_destroyer.jpg
+Core Set,Ship,Blob Fighter,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Blob-Fighter-214x300.jpg,star_realms_assets/core/blob/blob_fighter.jpg
+Core Set,Base,Blob Wheel,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Blob-Wheel-300x214.jpg,star_realms_assets/core/blob/blob_wheel.jpg
+Core Set,Base,Blob World,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Blob-World-300x214.jpg,star_realms_assets/core/blob/blob_world.jpg
+Core Set,Ship,Mothership,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Mothership-214x300.jpg,star_realms_assets/core/blob/mothership.jpg
+Core Set,Ship,Ram,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Ram-214x300.jpg,star_realms_assets/core/blob/ram.jpg
+Core Set,Base,The Hive,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/The-Hive-300x214.jpg,star_realms_assets/core/blob/the_hive.jpg
+Core Set,Ship,Trade Pod,Blob,https://www.starrealms.com/wp-content/uploads/2017/12/Trade-Pod-214x300.jpg,star_realms_assets/core/blob/trade_pod.jpg
+Core Set,Ship,Battle Mech,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Battle-Mech-214x300.jpg,star_realms_assets/core/machine_cult/battle_mech.jpg
+Core Set,Base,Battle Station,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Battle-Station-300x214.jpg,star_realms_assets/core/machine_cult/battle_station.jpg
+Core Set,Base,Brain World,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Brain-World-300x214.jpg,star_realms_assets/core/machine_cult/brain_world.jpg
+Core Set,Base,Junkyard,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Junkyard-300x214.jpg,star_realms_assets/core/machine_cult/junkyard.jpg
+Core Set,Base,Machine Base,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Machine-Base-300x214.jpg,star_realms_assets/core/machine_cult/machine_base.jpg
+Core Set,Base,Mech World,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Mech-World-300x214.jpg,star_realms_assets/core/machine_cult/mech_world.jpg
+Core Set,Ship,Missile AI,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Missile-AI-214x300.jpg,star_realms_assets/core/machine_cult/missile_AI.jpg
+Core Set,Ship,Missile Mech,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Missile-Mech-214x300.jpg,star_realms_assets/core/machine_cult/missile_mech.jpg
+Core Set,Ship,Patrol Mech,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Patrol-Mech-214x300.jpg,star_realms_assets/core/machine_cult/patrol_mech.jpg
+Core Set,Ship,Stealth Needle,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Stealth-Needle-214x300.jpg,star_realms_assets/core/machine_cult/stealth_needle.jpg
+Core Set,Ship,Supply AI,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Supply-AI-214x300.jpg,star_realms_assets/core/machine_cult/supply_AI.jpg
+Core Set,Ship,Trade AI,Machine Cult,https://www.starrealms.com/wp-content/uploads/2017/12/Trade-AI-214x300.jpg,star_realms_assets/core/machine_cult/trade_AI.jpg
+Core Set,Ship,Battlecruiser,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Battlecruiser-214x300.jpg,star_realms_assets/core/star_empire/battlecruiser.jpg
+Core Set,Ship,Corvette,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Corvette-214x300.jpg,star_realms_assets/core/star_empire/corvette.jpg
+Core Set,Ship,Dreadnaught,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Dreadnaught-214x300.jpg,star_realms_assets/core/star_empire/dreadnaught.jpg
+Core Set,Base,Fleet HQ,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Fleet-HQ-300x214.jpg,star_realms_assets/core/star_empire/fleet_hq.jpg
+Core Set,Ship,Imperial Fighter,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Imperial-Fighter-214x300.jpg,star_realms_assets/core/star_empire/imperial_fighter.jpg
+Core Set,Ship,Imperial Frigate,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Imperial-Frigate-214x300.jpg,star_realms_assets/core/star_empire/imperial_frigate.jpg
+Core Set,Base,Recycling Station,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Recycling-Station-300x214.jpg,star_realms_assets/core/star_empire/recycling_station.jpg
+Core Set,Base,Royal Redoubt,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Royal-Redoubt-300x214.jpg,star_realms_assets/core/star_empire/royal_redoubt.jpg
+Core Set,Base,Space Station,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Space-Station-300x214.jpg,star_realms_assets/core/star_empire/space_station.jpg
+Core Set,Ship,Survey Ship,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/Survey-Ship-214x300.jpg,star_realms_assets/core/star_empire/survey_ship.jpg
+Core Set,Base,War World,Star Empire,https://www.starrealms.com/wp-content/uploads/2017/12/War-World-300x214.jpg,star_realms_assets/core/star_empire/war_world.jpg
+Core Set,Base,Barter World,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Barter-World-300x214.jpg,star_realms_assets/core/trade_federation/barter_world.jpg
+Core Set,Base,Central Office,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Central-Office-300x214.jpg,star_realms_assets/core/trade_federation/central_office.jpg
+Core Set,Ship,Command Ship,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Command-Ship-214x300.jpg,star_realms_assets/core/trade_federation/command_ship.jpg
+Core Set,Ship,Cutter,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Cutter-214x300.jpg,star_realms_assets/core/trade_federation/cutter.jpg
+Core Set,Base,Defense Center,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Defense-Center-300x214.jpg,star_realms_assets/core/trade_federation/defense_center.jpg
+Core Set,Ship,Embassy Yacht,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Embassy-Yacht-214x300.jpg,star_realms_assets/core/trade_federation/embassy_yacht.jpg
+Core Set,Ship,Federation Shuttle,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Federation-Shuttle-214x300.jpg,star_realms_assets/core/trade_federation/federation_shuttle.jpg
+Core Set,Ship,Flagship,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Flagship-214x300.jpg,star_realms_assets/core/trade_federation/flagship.jpg
+Core Set,Ship,Freighter,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Freighter-214x300.jpg,star_realms_assets/core/trade_federation/freighter.jpg
+Core Set,Base,Port of Call,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Port-of-Call-300x214.jpg,star_realms_assets/core/trade_federation/port_of_call.jpg
+Core Set,Ship,Trade Escort,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Trade-Escort-214x300.jpg,star_realms_assets/core/trade_federation/trade_escort.jpg
+Core Set,Base,Trading Post,Trade Federation,https://www.starrealms.com/wp-content/uploads/2017/12/Trading-Post-300x214.jpg,star_realms_assets/core/trade_federation/trading_post.jpg

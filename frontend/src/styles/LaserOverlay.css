@@ -1,0 +1,54 @@
+@import './tokens.css';
+
+.laser-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 500;
+  overflow: visible;
+  width: 100vw;
+  height: 100vh;
+}
+
+.laser-beam {
+  stroke-linecap: round;
+  filter: url(#laser-glow);
+  animation: laser-travel 0.9s ease-out forwards;
+}
+
+.laser-beam--red    { stroke: #ff3333; }
+.laser-beam--orange { stroke: #ff8c00; }
+.laser-beam--white  { stroke: rgba(255,255,255,0.9); }
+
+@keyframes laser-travel {
+  0%   { stroke-dashoffset: var(--beam-length); opacity: 1; }
+  55%  { stroke-dashoffset: 0;                  opacity: 1; }
+  80%  { stroke-dashoffset: 0;                  opacity: 0.9; }
+  100% { stroke-dashoffset: 0;                  opacity: 0; }
+}
+
+.laser-impact {
+  animation: impact-burst 0.45s ease-out forwards;
+}
+
+@keyframes impact-burst {
+  0%   { r: 0;    opacity: 0.9; }
+  50%  { r: 30;   opacity: 0.8; }
+  100% { r: 54;   opacity: 0; }
+}
+
+/* Fleet launch: in-play cards rise when attacking */
+.fleet-launching .card {
+  animation: ship-launch 0.65s ease-in-out forwards;
+}
+
+.fleet-launching .card:nth-child(2) { animation-delay: 0.05s; }
+.fleet-launching .card:nth-child(3) { animation-delay: 0.10s; }
+.fleet-launching .card:nth-child(4) { animation-delay: 0.15s; }
+.fleet-launching .card:nth-child(5) { animation-delay: 0.20s; }
+
+@keyframes ship-launch {
+  0%   { transform: translateY(0)     scale(1);    filter: brightness(1); }
+  35%  { transform: translateY(-18px) scale(1.07); filter: brightness(1.5) drop-shadow(0 0 10px #ff4444); }
+  100% { transform: translateY(0)     scale(1);    filter: brightness(1); }
+}

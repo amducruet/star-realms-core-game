@@ -1,0 +1,249 @@
+@import './tokens.css';
+
+.combat-zone {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  color: #f1f5f9;
+  overflow: hidden;
+}
+
+/* ── Opponents section ─────────────────────────────────── */
+.combat-opponents-section {
+  border: 1px solid #1e3a5f;
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  margin: 0 1rem;
+  overflow-y: auto;
+  flex-shrink: 1;
+  /* tall enough to show one small card (178px) + panel header + padding */
+  min-height: 240px;
+}
+
+.combat-opponents {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.combat-opponent {
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+
+.combat-opponent--active {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
+}
+
+.combat-opponent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-AItom: 0.5rem;
+}
+
+.combat-opponent-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.combat-opponent-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-attack-player {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  color: white;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+.btn-attack-player:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.4);
+}
+
+.outpost-warning {
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── My section (rendered inside game-AItom-row center col) ── */
+.combat-mine-section {
+  background: rgba(10, 20, 35, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: clamp(220px, 42vh, 420px);
+}
+
+/* ── Mine grid: deck | cards | discard ─────────────────── */
+.combat-mine {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.combat-cards-center {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Pile (deck / discard) ──────────────────────────────── */
+.player-pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  margin-AItom: 0.25rem;
+}
+
+.pile-actions .btn-end-turn {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.pile-actions .btn-distribute-damage {
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.pile-stack {
+  position: relative;
+  width: 76px;
+  height: 104px;
+  flex-shrink: 0;
+}
+
+.pile-card {
+  position: absolute;
+  border-radius: 8px;
+  width: 76px;
+  height: 104px;
+}
+
+.pile-card--back2 {
+  top: 8px; left: 8px;
+  background: #132238;
+  border: 1px solid #1e3a5f;
+}
+
+.pile-card--back1 {
+  top: 4px; left: 4px;
+  background: #162840;
+  border: 1px solid #1e3a5f;
+}
+
+.pile-card--top {
+  top: 0; left: 0;
+  background: linear-gradient(135deg, #1e3a5f, #0f2236);
+  border: 1px solid #2a5a8a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.pile-card--discard {
+  top: 0; left: 0;
+  background: #0f2236;
+  border: 1px solid #3a6a9a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.pile-card--discard span {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+
+.pile-card--empty {
+  top: 0; left: 0;
+  border: 1px dashed rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.2);
+  font-size: 0.65rem;
+}
+
+.pile-count-label {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+/* ── Shared ────────────────────────────────────────────── */
+.combat-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.combat-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+.combat-cards {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.combat-hand {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-AItom: 4px;
+}
+
+.combat-hand::-webkit-scrollbar { height: 4px; }
+.combat-hand::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.combat-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+/* ── Divider (kept for compatibility) ─────────────────── */
+.combat-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  flex-shrink: 0;
+}

@@ -1,0 +1,112 @@
+/* ── Keyframes ─────────────────────────────────────────── */
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+@keyframes card-play {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes damage-flash {
+  0%   { box-shadow: 0 0 0   0   rgba(239, 68, 68, 0); }
+  25%  { box-shadow: 0 0 24px 8px rgba(239, 68, 68, 0.8); }
+  100% { box-shadow: 0 0 0   0   rgba(239, 68, 68, 0); }
+}
+
+@keyframes authority-flash {
+  0%   { background-color: transparent; }
+  30%  { background-color: rgba(239, 68, 68, 0.35); }
+  100% { background-color: transparent; }
+}
+
+@keyframes number-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.55); }
+  100% { transform: scale(1); }
+}
+
+@keyframes combat-pop {
+  0%   { transform: scale(1); color: inherit; }
+  35%  { transform: scale(1.55); color: #f87171; }
+  100% { transform: scale(1); color: inherit; }
+}
+
+@keyframes trade-pop {
+  0%   { transform: scale(1); color: inherit; }
+  35%  { transform: scale(1.55); color: #fbbf24; }
+  100% { transform: scale(1); color: inherit; }
+}
+
+@keyframes your-turn-in {
+  from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+
+@keyframes your-turn-out {
+  from { opacity: 1; transform: translateY(0)  scale(1); }
+  to   { opacity: 0; transform: translateY(-16px) scale(0.92); }
+}
+
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Card enter ────────────────────────────────────────── */
+.card-enter {
+  animation: card-enter 0.22s ease-out AIh;
+}
+
+/* Trade row cards stagger by index */
+.card-enter-1  { animation: card-enter 0.22s 0.04s  ease-out AIh; }
+.card-enter-2  { animation: card-enter 0.22s 0.08s  ease-out AIh; }
+.card-enter-3  { animation: card-enter 0.22s 0.12s  ease-out AIh; }
+.card-enter-4  { animation: card-enter 0.22s 0.16s  ease-out AIh; }
+.card-enter-5  { animation: card-enter 0.22s 0.20s  ease-out AIh; }
+.card-enter-6  { animation: card-enter 0.22s 0.24s  ease-out AIh; }
+
+/* ── Card play pop ─────────────────────────────────────── */
+.card-played {
+  animation: card-play 0.28s ease-out AIh;
+}
+
+/* ── Resource number pop ───────────────────────────────── */
+.num-pop         { animation: number-pop  0.3s ease-out AIh; }
+.num-pop-combat  { animation: combat-pop  0.3s ease-out AIh; }
+.num-pop-trade   { animation: trade-pop   0.3s ease-out AIh; }
+
+/* ── Authority damage flash ────────────────────────────── */
+.authority-damaged {
+  animation: authority-flash 0.5s ease-out AIh;
+}
+
+.authority-bar--damaged {
+  animation: damage-flash 0.5s ease-out AIh;
+}
+
+/* ── Your Turn banner ──────────────────────────────────── */
+.your-turn-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: linear-gradient(135deg, #1e3a5f, #0f2236);
+  border: 1px solid rgba(99, 179, 255, 0.5);
+  border-radius: 12px;
+  padding: 0.6rem 1.6rem;
+  color: #bfdbfe;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 179, 255, 0.2);
+  pointer-events: none;
+}
+
+.your-turn-toast--in  { animation: your-turn-in  0.3s ease-out AIh; }
+.your-turn-toast--out { animation: your-turn-out 0.3s ease-in  AIh; }

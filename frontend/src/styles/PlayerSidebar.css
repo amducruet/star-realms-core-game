@@ -1,0 +1,107 @@
+@import './tokens.css';
+
+.player-sidebar {
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #f1f5f9;
+}
+
+.sidebar-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-AItom: 0.25rem;
+}
+
+.sidebar-player {
+  background: #122033;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  transition: border-color 0.2s;
+}
+
+.sidebar-player--active {
+  border-color: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+}
+
+.sidebar-player--me {
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.sidebar-player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-AItom: 0.35rem;
+}
+
+.sidebar-player-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.sidebar-turn-arrow {
+  color: #22c55e;
+  font-size: 0.7rem;
+}
+
+.sidebar-ai-badge,
+.sidebar-you-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-ai-badge  { background: rgba(139, 92, 246, 0.3); color: #a78bfa; }
+.sidebar-you-badge { background: rgba(59, 130, 246, 0.3);  color: #93c5fd; }
+
+.sidebar-authority {
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.sidebar-authority-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-AItom: 0.4rem;
+}
+
+.sidebar-authority-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease, background 0.5s ease;
+}
+
+.sidebar-player-stats {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.sidebar-player-stats span {
+  font-size: 0.7rem;
+  background: rgba(255,255,255,0.07);
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
