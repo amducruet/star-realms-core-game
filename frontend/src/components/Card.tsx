@@ -119,7 +119,7 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
           )}
         </div>
         {card.is_outpost && <span className="card-outpost-badge">OUTPOST</span>}
-        {isBase && !card.is_outpost && <span className="card-base-badge">BASE</span>}
+        {isBase && <span className="card-base-badge">BASE</span>}
       </div>
 
       {/* Info panel: stats | divider | abilities */}
