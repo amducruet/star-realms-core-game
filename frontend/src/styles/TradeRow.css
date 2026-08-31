@@ -32,7 +32,9 @@
   align-items: flex-start;
   justify-content: center;
   overflow-x: auto;
-  padding-AItom: 0.25rem;
+  overflow-y: visible;
+  padding-bottom: 0.25rem;
+  padding-top: 12px;
   flex: 1;
 }
 
