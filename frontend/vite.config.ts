@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io'],
+    allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io', '.railway.app', '.up.railway.app'],
     port: 3000,
     proxy: {
       '/api': {
