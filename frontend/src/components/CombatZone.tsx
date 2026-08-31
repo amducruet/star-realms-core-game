@@ -34,7 +34,7 @@ export function CombatZone({
       <div className="combat-opponents" style={{ gridTemplateColumns: `repeat(${Math.min(opponents.length, 5)}, 1fr)` }}>
         {opponents.map((opp, idx) => {
           const isActive = players[activePlayerIndex]?.player_id === opp.player_id;
-          const hasOutpost = opp.bases.some(b => b.is_outpost);
+          const hasNonOutpostBase = opp.bases.some(b => !b.is_outpost);
           const accent = OPPONENT_COLORS[idx % OPPONENT_COLORS.length];
           return (
             <div
@@ -49,12 +49,12 @@ export function CombatZone({
                   {isActive && '▶ '}{opp.name}{opp.is_ai&& ' 🤖'}
                 </span>
                 <div className="combat-opponent-actions">
-                  {canAttack && !hasOutpost && (
+                  {canAttack && !hasNonOutpostBase && (
                     <button className="btn-attack-player" onClick={() => onAttackPlayer(opp.player_id)}>
                       ⚔️ Attack ({currentPlayer.combat})
                     </button>
                   )}
-                  {hasOutpost && <span className="outpost-warning">⚠️ Destroy outpost first</span>}
+                  {hasNonOutpostBase && <span className="outpost-warning">⚠️ Destroy bases first</span>}
                 </div>
               </div>
 

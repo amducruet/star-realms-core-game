@@ -11,7 +11,7 @@
   padding: 1rem;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .game-zone-top  { grid-area: top; position: relative; }
@@ -31,15 +31,16 @@
   flex-direction: column;
   min-height: 0;
   gap: 0.75rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
-.game-AItom-row {
+.game-bottom-row {
   display: grid;
   grid-template-columns: 240px 1fr 240px;
   gap: 0.75rem;
   align-items: stretch;
   flex-shrink: 0;
+  padding-bottom: 2rem;
 }
 
 /* CombatZone scrolls, AuthorityBar stays pinned */

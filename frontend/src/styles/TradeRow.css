@@ -22,7 +22,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  margin-AItom: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .trade-row-cards {
@@ -55,6 +55,8 @@
 .trade-pile {
   display: flex;
   flex-direction: column;
+  overflow: visible;
+  padding-top: 12px;
 }
 
 .scrap-pile-wrap {

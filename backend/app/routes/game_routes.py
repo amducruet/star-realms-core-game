@@ -331,6 +331,27 @@ async def execute_ai_turn(game_id: str):
                 opponents = [p for p in game.players if p.player_id != current_player.player_id and p.authority > 0]
                 if opponents and cp.combat > 0:
                     target = min(opponents, key=lambda p: p.authority)
+
+                    # Must destroy non-outpost bases first
+                    non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+                    for base in non_outpost_bases:
+                        cp = game.get_player(current_player.player_id)
+                        if cp.combat >= base.current_defense:
+                            await manager.broadcast(game_id, {
+                                "type": "combat_attack",
+                                "attacker_id": current_player.player_id,
+                                "target_id": target.player_id,
+                                "base_id": base.instance_id,
+                                "damage": base.current_defense,
+                                "game": game.model_dump()
+                            })
+                            await asyncio.sleep(1.2)
+                            game = game_service.attack_base(game.game_id, current_player.player_id, target.player_id, base.instance_id, base.current_defense)
+                            await manager.broadcast(game_id, {"type": "base_attacked", "game": game.model_dump()})
+                            await asyncio.sleep(0.6)
+
+                    # Then attack outposts
+                    target = game.get_player(target.player_id)
                     outposts = [b for b in target.bases if b.is_outpost]
                     for outpost in outposts:
                         cp = game.get_player(current_player.player_id)
@@ -347,8 +368,12 @@ async def execute_ai_turn(game_id: str):
                             game = game_service.attack_base(game.game_id, current_player.player_id, target.player_id, outpost.instance_id, outpost.current_defense)
                             await manager.broadcast(game_id, {"type": "base_attacked", "game": game.model_dump()})
                             await asyncio.sleep(0.6)
+
+                    # Attack player only if no non-outpost bases remain
                     cp = game.get_player(current_player.player_id)
-                    if cp.combat > 0:
+                    target = game.get_player(target.player_id)
+                    remaining_bases = [b for b in target.bases if not b.is_outpost]
+                    if cp.combat > 0 and not remaining_bases:
                         await manager.broadcast(game_id, {
                             "type": "combat_attack",
                             "attacker_id": current_player.player_id,
