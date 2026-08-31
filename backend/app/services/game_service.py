@@ -813,6 +813,10 @@ class GameService:
         player.hand.clear()
         player.in_play.clear()
 
+        # Reset base defenses (damage doesn't carry over between turns)
+        for base in player.bases:
+            base.current_defense = base.defense
+
         # Reset resources
         player.combat = 0
         player.trade = 0
@@ -861,7 +865,6 @@ class GameService:
         EffectType.SCRAP_CARD,
         EffectType.DISCARD_CARD,
         EffectType.DISCARD_ANY_NUMBER,
-        EffectType.CHOICE,
         EffectType.BASE_FROM_DISCARD_TO_TOP,
     }
 
