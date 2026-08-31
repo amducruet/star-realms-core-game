@@ -11,8 +11,11 @@ export function useWebSocket(gameId: string | null, onMessage: (message: WSMessa
   useEffect(() => {
     if (!gameId) return;
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${wsProtocol}://${window.location.host}/api/ws/${gameId}`;
+    const backendUrl = import.meta.env.VITE_API_URL ?? '';
+    const wsBase = backendUrl
+      ? backendUrl.replace(/^http/, 'ws')
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+    const wsUrl = `${wsBase}/api/ws/${gameId}`;
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
