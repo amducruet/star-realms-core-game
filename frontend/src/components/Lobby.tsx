@@ -89,14 +89,18 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
         <div className="lobby-card">
           <h2>⭐ Star Realms</h2>
           <div className="lobby-waiting">
-            <div className="game-code-box">
-              <span className="game-code-label">Game Code</span>
-              <span className="game-code">{gameState.game_id}</span>
-              <button className="btn-copy" onClick={() => copyGameCode(gameState.game_id)}>
-                {copied ? '✓ Copied!' : 'Copy'}
-              </button>
-            </div>
-            <p className="game-code-hint">Share this code so others can join</p>
+            {!gameState.players.some(p => p.is_ai) && (
+              <>
+                <div className="game-code-box">
+                  <span className="game-code-label">Game Code</span>
+                  <span className="game-code">{gameState.game_id}</span>
+                  <button className="btn-copy" onClick={() => copyGameCode(gameState.game_id)}>
+                    {copied ? '✓ Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <p className="game-code-hint">Share this code so others can join</p>
+              </>
+            )}
 
             <div className="players-list">
               <h4>Players ({gameState.players.length})</h4>
@@ -126,7 +130,7 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
             <h3>How to Play</h3>
             <button className="help-close" onClick={() => setShowHelp(false)}>✕</button>
             <div className="help-content">
-              <p><strong>Objective:</strong> Reduce all opponents' Authority to 0.</p>
+              <p><strong>Objective:</strong> Be the last one standing</p>
               <p><strong>Each turn:</strong> All cards in your hand play automatically. Use the Trade and Combat they generate.</p>
               <p><strong>Trade:</strong> Buy cards from the Trade Row to strengthen your deck.</p>
               <p><strong>Combat:</strong> Attack opponent bases and players. You must destroy all bases before hitting a player directly.</p>
