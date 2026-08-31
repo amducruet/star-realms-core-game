@@ -12,6 +12,7 @@ interface LobbyProps {
 export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [copied, setCopied] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const copyGameCode = (code: string) => {
     const doFallback = () => {
@@ -119,8 +120,27 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
 
   return (
     <div className="lobby">
+      {showHelp && (
+        <div className="help-overlay" onClick={() => setShowHelp(false)}>
+          <div className="help-modal" onClick={e => e.stopPropagation()}>
+            <h3>How to Play</h3>
+            <button className="help-close" onClick={() => setShowHelp(false)}>✕</button>
+            <div className="help-content">
+              <p><strong>Objective:</strong> Reduce all opponents' Authority to 0.</p>
+              <p><strong>Each turn:</strong> All cards in your hand play automatically. Use the Trade and Combat they generate.</p>
+              <p><strong>Trade:</strong> Buy cards from the Trade Row to strengthen your deck.</p>
+              <p><strong>Combat:</strong> Attack opponent bases and players. You must destroy all bases before hitting a player directly.</p>
+              <p><strong>Bases &amp; Outposts:</strong> Bases stay in play and give bonuses every turn. Outposts must be destroyed before you can attack the player. All bases block direct attacks.</p>
+              <p><strong>Scrap:</strong> Some cards let you scrap (permanently remove) a card — great for thinning your deck.</p>
+              <p><strong>Factions:</strong> Playing multiple cards of the same faction unlocks Ally bonuses.</p>
+              <p><strong>End Turn:</strong> Draw 5 new cards and pass to the next player.</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="lobby-card">
         <h2>⭐ Star Realms</h2>
+        <button className="help-btn" onClick={() => setShowHelp(true)}>How to Play</button>
 
         <div className="lobby-tabs">
           <button className={`lobby-tab ${tab === 'create' ? 'lobby-tab--active' : ''}`} onClick={() => { setTab('create'); setError(null); }}>
@@ -148,14 +168,14 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
           {tab === 'create' ? (
             <>
               <div className="form-group">
-                <label>AIOpponents</label>
+                <label>Robot Opponents</label>
                 <select value={aiCount} onChange={e => setAiCount(Number(e.target.value))} disabled={loading}>
-                  <option value={0}>0 AI (humans only)</option>
-                  <option value={1}>1 AI</option>
-                  <option value={2}>2 AI</option>
-                  <option value={3}>3 AI</option>
-                  <option value={4}>4 AI</option>
-                  <option value={5}>5 AI</option>
+                  <option value={0}>Invite a friend</option>
+                  <option value={1}>1 Robot</option>
+                  <option value={2}>2 Robot</option>
+                  <option value={3}>3 Robot</option>
+                  <option value={4}>4 Robot</option>
+                  <option value={5}>5 Robot</option>
                 </select>
               </div>
               <div className="form-group">

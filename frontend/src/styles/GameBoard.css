@@ -138,12 +138,12 @@
 
 .game-over h2 {
   font-size: 3rem;
-  margin-AItom: 2rem;
+  margin-bottom: 2rem;
 }
 
 .game-over .winner {
   font-size: 2rem;
-  margin-AItom: 2rem;
+  margin-bottom: 2rem;
   background: linear-gradient(90deg, #ffd700, #ffa500);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -180,7 +180,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  margin-AItom: 0.5rem;
+  margin-bottom: 0.5rem;
   flex-shrink: 0;
 }
 

@@ -173,3 +173,35 @@
   margin: 0.5rem 0;
   text-align: left;
 }
+
+.help-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+  border-radius: 6px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+.help-btn:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+
+.help-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000;
+}
+.help-modal {
+  background: #0d1b2a; border: 1px solid rgba(99,179,255,0.3);
+  border-radius: 12px; padding: 2rem; max-width: 520px; width: 90%;
+  position: relative;
+}
+.help-modal h3 { margin: 0 0 1rem; font-size: 1.3rem; color: #bfdbfe; }
+.help-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: none; border: none; color: rgba(255,255,255,0.5);
+  font-size: 1.2rem; cursor: pointer;
+}
+.help-close:hover { color: #fff; }
+.help-content p { font-size: 0.88rem; line-height: 1.6; margin: 0.5rem 0; color: rgba(255,255,255,0.8); }
+.help-content strong { color: #93c5fd; }

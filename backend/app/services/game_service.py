@@ -425,6 +425,13 @@ class GameService:
             }
             print(f"  → Pending discard effect: target={effect.get('target', 'opponent')}")
 
+        elif effect_type == EffectType.DESTROY_BASE and game is not None:
+            game.pending_effect = {
+                'type': 'destroy_base',
+                'optional': effect.get('optional', False),
+            }
+            print(f"  → Pending destroy base effect")
+
         elif effect_type == EffectType.GAIN_COMBAT_PER_SCRAPPED:
             amount = effect.get('amount', 1)
             total = player.scrapped_this_turn + 1  # +1 for the card being scrapped now
@@ -556,19 +563,20 @@ class GameService:
         if damage > player.combat:
             raise ValueError("Not enough combat")
 
-        # Check if target has outposts that must be attacked first
-        outposts = [b for b in target.bases if b.is_outpost]
-        if outposts:
-            raise ValueError("Must destroy all outposts before attacking player")
+        # All bases must be destroyed before attacking the player directly
+        if target.bases:
+            raise ValueError("Must destroy all bases before attacking player")
 
         # Deal damage
         player.combat -= damage
         target.authority -= damage
 
-        # Check for winner
+        # Check for winner — only end game when all opponents are eliminated
         if target.authority <= 0:
-            game.phase = GamePhase.ENDED
-            game.winner_id = player_id
+            alive_opponents = [p for p in game.players if p.player_id != player_id and p.authority > 0]
+            if not alive_opponents:
+                game.phase = GamePhase.ENDED
+                game.winner_id = player_id
 
         # Log action
         action = GameAction(
@@ -693,7 +701,8 @@ class GameService:
         # Check if base is destroyed
         if base.current_defense <= 0:
             target.bases.remove(base)
-            game.scrap_heap.append(base)
+            base.current_defense = base.defense
+            target.discard_pile.append(base)
 
             # Log destruction
             action = GameAction(
@@ -804,6 +813,10 @@ class GameService:
         player.hand.clear()
         player.in_play.clear()
 
+        # Reset base defenses (damage doesn't carry over between turns)
+        for base in player.bases:
+            base.current_defense = base.defense
+
         # Reset resources
         player.combat = 0
         player.trade = 0
@@ -852,7 +865,6 @@ class GameService:
         EffectType.SCRAP_CARD,
         EffectType.DISCARD_CARD,
         EffectType.DISCARD_ANY_NUMBER,
-        EffectType.CHOICE,
         EffectType.BASE_FROM_DISCARD_TO_TOP,
     }
 
@@ -976,16 +988,17 @@ class GameService:
         if not player:
             raise ValueError(f"Player {player_id} not found")
 
-        if game.current_player.player_id != player_id:
-            raise ValueError("Not your turn")
-
         if not game.pending_effect or game.pending_effect.get('type') != 'discard_card':
             raise ValueError("No pending discard effect")
 
         pe_target = game.pending_effect.get('target', 'opponent')
         if pe_target == 'self':
+            # Current player discards their own card
+            if game.current_player.player_id != player_id:
+                raise ValueError("Not your turn")
             target = player
         else:
+            # The targeted opponent chooses which card to discard
             target = game.get_player(target_player_id)
             if not target:
                 raise ValueError(f"Target player {target_player_id} not found")
@@ -1009,6 +1022,41 @@ class GameService:
             player_id=player_id,
             timestamp=time.time(),
             data={"instance_id": instance_id, "card_name": card.name, "target_player_id": target_player_id}
+        )
+        game.action_log.append(action)
+        return game
+
+    def resolve_destroy_base(self, game_id: str, player_id: str, target_player_id: str, instance_id: str) -> 'GameState':
+        """Resolve a pending destroy_base effect by destroying a target opponent's base."""
+        game = self.games.get(game_id)
+        if not game:
+            raise ValueError(f"Game {game_id} not found")
+
+        if game.current_player.player_id != player_id:
+            raise ValueError("Not your turn")
+
+        if not game.pending_effect or game.pending_effect.get('type') != 'destroy_base':
+            raise ValueError("No pending destroy base effect")
+
+        target = game.get_player(target_player_id)
+        if not target or target_player_id == player_id:
+            raise ValueError(f"Invalid target player {target_player_id}")
+
+        base = next((b for b in target.bases if b.instance_id == instance_id), None)
+        if not base:
+            raise ValueError(f"Base {instance_id} not found in target's bases")
+
+        target.bases.remove(base)
+        base.current_defense = base.defense
+        target.discard_pile.append(base)
+        game.pending_effect = None
+
+        action = GameAction(
+            action_id=str(uuid.uuid4()),
+            action_type="destroy_base",
+            player_id=player_id,
+            timestamp=time.time(),
+            data={"target_player_id": target_player_id, "instance_id": instance_id, "card_name": base.name}
         )
         game.action_log.append(action)
         return game
