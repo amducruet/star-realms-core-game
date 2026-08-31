@@ -88,6 +88,11 @@ class ResolveDiscardRequest(GameActionRequest):
     target_player_id: str
 
 
+class ResolveDestroyBaseRequest(GameActionRequest):
+    instance_id: str
+    target_player_id: str
+
+
 class SkipEffectRequest(GameActionRequest):
     pass
 
@@ -448,6 +453,17 @@ async def resolve_discard_any(game_id: str, request: ResolveDiscardAnyRequest):
     """Discard one card as part of a discard_any_number effect."""
     try:
         game = game_service.resolve_discard_any(game_id, request.player_id, request.instance_id)
+        await manager.broadcast(game_id, {"type": "effect_resolved", "game": game.model_dump()})
+        return {"status": "success", "game": game.model_dump()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/resolve_destroy_base")
+async def resolve_destroy_base(game_id: str, request: ResolveDestroyBaseRequest):
+    """Resolve a destroy_base pending effect by choosing an opponent's base to destroy."""
+    try:
+        game = game_service.resolve_destroy_base(game_id, request.player_id, request.target_player_id, request.instance_id)
         await manager.broadcast(game_id, {"type": "effect_resolved", "game": game.model_dump()})
         return {"status": "success", "game": game.model_dump()}
     except ValueError as e:

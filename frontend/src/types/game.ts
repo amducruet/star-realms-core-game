@@ -63,7 +63,7 @@ export interface GameState {
   action_log: GameAction[];
   winner_id: string | null;
   pending_effect: {
-    type: 'scrap_card' | 'discard_card' | 'choice' | 'acquire_free_to_top' | 'base_from_discard_to_top' | 'discard_any_number' | 'copy_ship';
+    type: 'scrap_card' | 'discard_card' | 'choice' | 'acquire_free_to_top' | 'base_from_discard_to_top' | 'discard_any_number' | 'copy_ship' | 'destroy_base';
     location?: 'hand' | 'discard' | 'hand_or_discard' | 'trade_row';
     target?: 'opponent' | 'self';
     optional: boolean;

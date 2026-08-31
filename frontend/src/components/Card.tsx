@@ -94,6 +94,10 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
   const playedClass = played ? 'card-played' : '';
 
   return (
+    <div style={{ position: 'relative', display: 'inline-block', flexShrink: 0 }}>
+    {count !== undefined && count > 1 && (
+      <div className="card-count">×{count}</div>
+    )}
     <div
       className={`card card-${factionColor} ${clickable ? 'card-clickable' : ''} ${compact ? 'card-compact' : ''} ${small ? 'card-small' : ''} ${enterClass} ${playedClass}`}
       onClick={clickable ? onClick : undefined}
@@ -115,6 +119,7 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
           )}
         </div>
         {card.is_outpost && <span className="card-outpost-badge">OUTPOST</span>}
+        {isBase && !card.is_outpost && <span className="card-base-badge">BASE</span>}
       </div>
 
       {/* Info panel: stats | divider | abilities */}
@@ -168,10 +173,6 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
 
       </div>
 
-      {count !== undefined && count > 1 && (
-        <div className="card-count">×{count}</div>
-      )}
-
       {showScrapButton && canScrap && onScrap && (
         <button
           className="btn-scrap"
@@ -180,6 +181,7 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
           <ScrapIcon size={12} /> Scrap
         </button>
       )}
+    </div>
     </div>
   );
 }

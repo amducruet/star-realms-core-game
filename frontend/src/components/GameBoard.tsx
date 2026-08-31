@@ -32,17 +32,26 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
   const [aiTrigger, setAiTrigger] = useState(0);
   const executingAiRef = useRef(false);
   const autoPlayingRef = useRef(false);
+  const prevPlayerIndexRef = useRef(-1);
 
   const currentPlayer = gameState.players.find((p) => p.player_id === currentPlayerId);
   const isMyTurn = gameState.players[gameState.current_player_index]?.player_id === currentPlayerId;
   const opponents = gameState.players.filter((p) => p.player_id !== currentPlayerId);
 
-  // Auto-play all hand cards at start of player's turn
+  // Auto-play all hand cards at start of player's turn, and resume after pending effects clear
+  const pendingEffectRef = useRef(gameState.pending_effect);
   useEffect(() => {
+    const wasBlocked = !!pendingEffectRef.current;
+    pendingEffectRef.current = gameState.pending_effect;
+
     if (!isMyTurn || !currentPlayerId || !currentPlayer) return;
     if (gameState.pending_effect) return;
     if (autoPlayingRef.current) return;
     if (currentPlayer.hand.length === 0) return;
+    // Only fire on turn start OR when a pending effect just cleared mid-hand
+    const turnChanged = gameState.current_player_index !== prevPlayerIndexRef.current;
+    if (!wasBlocked && !turnChanged) return;
+    if (turnChanged) prevPlayerIndexRef.current = gameState.current_player_index;
 
     const playAll = async () => {
       autoPlayingRef.current = true;
@@ -63,7 +72,7 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     };
 
     playAll();
-  }, [isMyTurn, gameState.current_player_index, gameState.game_id]);
+  }, [isMyTurn, gameState.current_player_index, gameState.game_id, gameState.pending_effect]);
 
   // Auto-execute AIturns
   useEffect(() => {
@@ -281,6 +290,17 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve discard');
+    }
+  };
+
+  const handleResolveDestroyBase = async (card: CardInstance, targetPlayerId: string) => {
+    if (!currentPlayerId) return;
+    try {
+      const response = await api.resolveDestroyBase(gameState.game_id, currentPlayerId, targetPlayerId, card.instance_id);
+      if (response.game) onGameUpdate(response.game);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resolve destroy base');
     }
   };
 
@@ -534,6 +554,28 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
               cards={allCards}
               cardOwners={opponents.length > 1 ? ownerById : undefined}
               onSelect={(card) => handleResolveDiscard(card, playerByCard[card.instance_id])}
+              onSkip={pe.optional ? handleSkipEffect : undefined}
+              isOptional={pe.optional}
+            />
+          );
+        }
+        if (pe.type === 'destroy_base') {
+          const allBases = opponents.flatMap(o => o.bases.map(b => ({ ...b, _ownerId: o.player_id })));
+          const ownerById: Record<string, string> = {};
+          const playerByBase: Record<string, string> = {};
+          for (const opp of opponents) {
+            for (const base of opp.bases) {
+              ownerById[base.instance_id] = opp.name;
+              playerByBase[base.instance_id] = opp.player_id;
+            }
+          }
+          return (
+            <CardPicker
+              title="Destroy a Base"
+              subtitle="Choose an opponent's base to destroy"
+              cards={allBases}
+              cardOwners={opponents.length > 1 ? ownerById : undefined}
+              onSelect={(card) => handleResolveDestroyBase(card, playerByBase[card.instance_id])}
               onSkip={pe.optional ? handleSkipEffect : undefined}
               isOptional={pe.optional}
             />

@@ -328,6 +328,19 @@ class ApiService {
     return response.json();
   }
 
+  async resolveDestroyBase(gameId: string, playerId: string, targetPlayerId: string, instanceId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE}/games/${gameId}/resolve_destroy_base`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId, target_player_id: targetPlayerId, instance_id: instanceId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to resolve destroy base');
+    }
+    return response.json();
+  }
+
   async skipEffect(gameId: string, playerId: string): Promise<ApiResponse> {
     const response = await fetch(`${API_BASE}/games/${gameId}/skip_effect`, {
       method: 'POST',
