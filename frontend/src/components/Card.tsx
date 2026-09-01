@@ -94,12 +94,9 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
   const playedClass = played ? 'card-played' : '';
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block', flexShrink: 0 }}>
-    {count !== undefined && count > 1 && (
-      <div className="card-count">×{count}</div>
-    )}
     <div
       className={`card card-${factionColor} ${clickable ? 'card-clickable' : ''} ${compact ? 'card-compact' : ''} ${small ? 'card-small' : ''} ${enterClass} ${playedClass}`}
+      style={{ flexShrink: 0 }}
       onClick={clickable ? onClick : undefined}
     >
       {/* Art + name/cost overlay */}
@@ -181,7 +178,6 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
           <ScrapIcon size={12} /> Scrap
         </button>
       )}
-    </div>
     </div>
   );
 }

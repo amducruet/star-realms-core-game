@@ -162,11 +162,28 @@ async def get_game(game_id: str):
     return {"status": "success", "game": game.model_dump()}
 
 
+def _auto_resolve_opponent_discard(game):
+    """If a discard_card effect targets an AI opponent, resolve it automatically (AI discards its worst card)."""
+    pe = game.pending_effect
+    if not pe or pe.get('type') != 'discard_card' or pe.get('target') != 'opponent':
+        return game
+    current_player = game.current_player
+    opponents = [p for p in game.players if p.player_id != current_player.player_id and p.is_ai]
+    target = next((p for p in opponents if p.hand), None)
+    if not target:
+        game.pending_effect = None
+        return game
+    worst = min(target.hand, key=lambda c: c.cost)
+    print(f"  🤖 Auto-resolving opponent discard: {target.name} discards {worst.name}")
+    return game_service.resolve_discard(game.game_id, current_player.player_id, target.player_id, worst.instance_id)
+
+
 @router.post("/games/{game_id}/play_card")
 async def play_card(game_id: str, request: PlayCardRequest):
     """Play a card from hand."""
     try:
         game = game_service.play_card(game_id, request.player_id, request.instance_id)
+        game = _auto_resolve_opponent_discard(game)
         await manager.broadcast(game_id, {
             "type": "card_played",
             "game": game.model_dump()

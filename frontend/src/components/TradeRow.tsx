@@ -38,12 +38,14 @@ export function TradeRow({ tradeRow, explorerPile, scrapHeap, currentPlayer, isM
         <div className="trade-pile">
           <span className="trade-zone-label">Explorer Pile</span>
           {explorerPile.length > 0 ? (
-            <Card
-              card={explorerPile[0]}
-              onClick={() => onAcquire(explorerPile[0], true)}
-              clickable={!onScrapSelect && canAfford(2)}
-              count={explorerPile.length}
-            />
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <Card
+                card={explorerPile[0]}
+                onClick={() => onAcquire(explorerPile[0], true)}
+                clickable={!onScrapSelect && canAfford(2)}
+              />
+              {explorerPile.length > 1 && <div className="card-count">×{explorerPile.length}</div>}
+            </div>
           ) : (
             <div className="pile-empty">Empty</div>
           )}

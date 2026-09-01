@@ -113,29 +113,50 @@ class AIService:
                 # Target opponent with lowest health for potential elimination
                 target = min(opponents, key=lambda p: p.authority)
 
-                # Attack outposts first
-                outposts = [b for b in target.bases if b.is_outpost]
-                for outpost in outposts:
-                    if current_player.combat >= outpost.current_defense:
-                        print(f"  ⚔️ Attacking outpost: {outpost.name}")
+                target_player_id = target.player_id
+
+                # Destroy non-outpost bases first (they block direct attacks)
+                non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+                for base in non_outpost_bases:
+                    current_player = game.get_player(ai_player.player_id)
+                    if current_player.combat >= base.current_defense:
+                        print(f"  ⚔️ Attacking base: {base.name}")
                         game = game_service.attack_base(
                             game.game_id,
                             ai_player.player_id,
-                            target.player_id,
-                            outpost.instance_id,
-                            outpost.current_defense
+                            target_player_id,
+                            base.instance_id,
+                            base.current_defense
                         )
-                        current_player = game.get_player(ai_player.player_id)
 
-                # Attack player with remaining combat
-                if current_player.combat > 0:
-                    print(f"  ⚔️ Attacking {target.name} for {current_player.combat} damage")
+                # Attack player directly (outposts don't block this)
+                current_player = game.get_player(ai_player.player_id)
+                refreshed_target = game.get_player(target_player_id)
+                remaining_non_outpost = [b for b in refreshed_target.bases if not b.is_outpost]
+                if current_player.combat > 0 and not remaining_non_outpost:
+                    print(f"  ⚔️ Attacking {refreshed_target.name} for {current_player.combat} damage")
                     game = game_service.attack_opponent(
                         game.game_id,
                         ai_player.player_id,
-                        target.player_id,
+                        target_player_id,
                         None
                     )
+                else:
+                    # Can't reach player — spend remaining combat on outposts if possible
+                    current_player = game.get_player(ai_player.player_id)
+                    refreshed_target = game.get_player(target_player_id)
+                    outposts = [b for b in refreshed_target.bases if b.is_outpost]
+                    for outpost in outposts:
+                        current_player = game.get_player(ai_player.player_id)
+                        if current_player.combat >= outpost.current_defense:
+                            print(f"  ⚔️ Attacking outpost: {outpost.name}")
+                            game = game_service.attack_base(
+                                game.game_id,
+                                ai_player.player_id,
+                                target_player_id,
+                                outpost.instance_id,
+                                outpost.current_defense
+                            )
 
         elif action_type == "end_turn":
             print(f"  ✅ Ending turn")
@@ -144,7 +165,7 @@ class AIService:
         return game
 
     def _resolve_pending_effect(self, game: GameState, ai_player: Player, game_service) -> GameState:
-        """Resolve any pending interactive effect for the AIplayer."""
+        """Resolve any pending interactive effect for the Robot player."""
         if not game.pending_effect:
             return game
 

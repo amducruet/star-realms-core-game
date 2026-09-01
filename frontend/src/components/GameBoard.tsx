@@ -44,14 +44,16 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     const wasBlocked = !!pendingEffectRef.current;
     pendingEffectRef.current = gameState.pending_effect;
 
+    // Always track the latest player index so turn-change detection works across full cycles
+    const turnChanged = gameState.current_player_index !== prevPlayerIndexRef.current;
+    prevPlayerIndexRef.current = gameState.current_player_index;
+
     if (!isMyTurn || !currentPlayerId || !currentPlayer) return;
     if (gameState.pending_effect) return;
     if (autoPlayingRef.current) return;
     if (currentPlayer.hand.length === 0) return;
     // Only fire on turn start OR when a pending effect just cleared mid-hand
-    const turnChanged = gameState.current_player_index !== prevPlayerIndexRef.current;
     if (!wasBlocked && !turnChanged) return;
-    if (turnChanged) prevPlayerIndexRef.current = gameState.current_player_index;
 
     const playAll = async () => {
       autoPlayingRef.current = true;
@@ -119,7 +121,7 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     }
 
     if (!isAI) {
-      console.log('❌ SKIP: Not an AIplayer (human turn)');
+      console.log('❌ SKIP: Not a Robot player (human turn)');
       return;
     }
 

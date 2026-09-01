@@ -59,7 +59,7 @@ class GameService:
         for i in range(ai_count):
             player = Player(
                 player_id=str(uuid.uuid4()),
-                name=f"AIPlayer {i + 1}",
+                name=f"Robot Player {i + 1}",
                 authority=starting_authority,
                 is_ai=True
             )
@@ -560,8 +560,10 @@ class GameService:
         if damage > player.combat:
             raise ValueError("Not enough combat")
 
-        # All bases must be destroyed before attacking the player directly
-        if target.bases:
+        # Non-outpost bases must be destroyed before attacking the player directly
+        # Outposts do not block direct player attacks
+        non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+        if non_outpost_bases:
             raise ValueError("Must destroy all bases before attacking player")
 
         # Deal damage
@@ -624,10 +626,10 @@ class GameService:
             if not target:
                 raise ValueError(f"Target player {target_player_id} not found")
 
-            # Check if target has outposts that must be attacked first
-            outposts = [b for b in target.bases if b.is_outpost]
-            if outposts:
-                raise ValueError(f"{target.name} has outposts that must be destroyed first")
+            # Non-outpost bases must be destroyed before dealing direct damage
+            non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+            if non_outpost_bases:
+                raise ValueError(f"{target.name} has bases that must be destroyed first")
 
         # Apply damage to all targets
         for target_data in targets:
