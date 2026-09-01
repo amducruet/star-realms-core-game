@@ -134,7 +134,7 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
               <p><strong>Each turn:</strong> All cards in your hand play automatically. Use the Trade and Combat they generate.</p>
               <p><strong>Trade:</strong> Buy cards from the Trade Row to strengthen your deck.</p>
               <p><strong>Combat:</strong> Attack opponent bases and players. You must destroy all bases before hitting a player directly.</p>
-              <p><strong>Bases &amp; Outposts:</strong> Bases stay in play and give bonuses every turn. Outposts must be destroyed before you can attack the player. All bases block direct attacks.</p>
+              <p><strong>Bases &amp; Outposts:</strong> Bases stay in play and give bonuses every turn. Non-outpost bases must all be destroyed before you can attack a player directly. Outposts can be attacked in any order and do not block direct attacks.</p>
               <p><strong>Scrap:</strong> Some cards let you scrap (permanently remove) a card — great for thinning your deck.</p>
               <p><strong>Factions:</strong> Playing multiple cards of the same faction unlocks Ally bonuses.</p>
               <p><strong>End Turn:</strong> Draw 5 new cards and pass to the next player.</p>

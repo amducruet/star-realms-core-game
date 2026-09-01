@@ -59,7 +59,7 @@ class GameService:
         for i in range(ai_count):
             player = Player(
                 player_id=str(uuid.uuid4()),
-                name=f"AIPlayer {i + 1}",
+                name=f"Robot Player {i + 1}",
                 authority=starting_authority,
                 is_ai=True
             )
@@ -563,8 +563,10 @@ class GameService:
         if damage > player.combat:
             raise ValueError("Not enough combat")
 
-        # All bases must be destroyed before attacking the player directly
-        if target.bases:
+        # Non-outpost bases must be destroyed before attacking the player directly
+        # Outposts are optional — player can choose to attack player or outpost in any order
+        non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+        if non_outpost_bases:
             raise ValueError("Must destroy all bases before attacking player")
 
         # Deal damage

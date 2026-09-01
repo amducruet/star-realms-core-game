@@ -20,7 +20,7 @@ export function YourTurnToast({ isMyTurn }: YourTurnToastProps) {
       leaveTimer.current = setTimeout(() => {
         setLeaving(true);
         setTimeout(() => setVisible(false), 300);
-      }, 1800);
+      }, 2400);
     }
     prevTurn.current = isMyTurn;
     return () => { if (leaveTimer.current) clearTimeout(leaveTimer.current); };

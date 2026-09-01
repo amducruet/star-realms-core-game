@@ -32,26 +32,17 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
   const [aiTrigger, setAiTrigger] = useState(0);
   const executingAiRef = useRef(false);
   const autoPlayingRef = useRef(false);
-  const prevPlayerIndexRef = useRef(-1);
 
   const currentPlayer = gameState.players.find((p) => p.player_id === currentPlayerId);
   const isMyTurn = gameState.players[gameState.current_player_index]?.player_id === currentPlayerId;
   const opponents = gameState.players.filter((p) => p.player_id !== currentPlayerId);
 
-  // Auto-play all hand cards at start of player's turn, and resume after pending effects clear
-  const pendingEffectRef = useRef(gameState.pending_effect);
+  // Auto-play all hand cards at turn start, and resume after a pending effect clears
   useEffect(() => {
-    const wasBlocked = !!pendingEffectRef.current;
-    pendingEffectRef.current = gameState.pending_effect;
-
     if (!isMyTurn || !currentPlayerId || !currentPlayer) return;
     if (gameState.pending_effect) return;
     if (autoPlayingRef.current) return;
     if (currentPlayer.hand.length === 0) return;
-    // Only fire on turn start OR when a pending effect just cleared mid-hand
-    const turnChanged = gameState.current_player_index !== prevPlayerIndexRef.current;
-    if (!wasBlocked && !turnChanged) return;
-    if (turnChanged) prevPlayerIndexRef.current = gameState.current_player_index;
 
     const playAll = async () => {
       autoPlayingRef.current = true;
@@ -286,7 +277,12 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     if (!currentPlayerId) return;
     try {
       const response = await api.resolveDiscard(gameState.game_id, currentPlayerId, targetPlayerId, card.instance_id);
-      if (response.game) onGameUpdate(response.game);
+      if (response.game) {
+        onGameUpdate(response.game);
+        // If the active player is still AI, re-trigger their turn to resume
+        const active = response.game.players[response.game.current_player_index];
+        if (active?.is_ai) setTimeout(() => setAiTrigger(prev => prev + 1), 300);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve discard');
@@ -421,7 +417,7 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
       )}
 
       {aiExecuting && (
-        <div className="ai-turn-banner">🤖 AIis thinking...</div>
+        <div className="ai-turn-banner">🤖 Robot is thinking...</div>
       )}
 
       {/* TOP — Trade Row */}
@@ -453,8 +449,8 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           onDistributeDamage={() => setShowDamageDistributor(true)}
         />
 
-        {/* AItom row: sidebar | mine | log */}
-        <div className="game-AItom-row">
+        {/* Bottom row: sidebar | mine | log */}
+        <div className="game-bottom-row">
           <div className="game-zone-left">
             <PlayerSidebar
               players={gameState.players}

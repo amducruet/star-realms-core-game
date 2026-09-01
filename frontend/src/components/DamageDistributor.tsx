@@ -96,12 +96,12 @@ export function DamageDistributor({
         <div className="damage-targets">
           {opponents.map((opponent) => {
             const damage = damageAllocation[opponent.player_id] || 0;
-            const hasOutpost = opponent.bases?.some((b) => b.is_outpost) || false;
+            const hasNonOutpostBase = opponent.bases?.some((b) => !b.is_outpost) || false;
 
             return (
               <div
                 key={opponent.player_id}
-                className={`target-row ${hasOutpost ? 'disabled' : ''}`}
+                className={`target-row ${hasNonOutpostBase ? 'disabled' : ''}`}
               >
                 <div className="target-info">
                   <span className="target-name">
@@ -109,14 +109,14 @@ export function DamageDistributor({
                     {opponent.is_ai&& ' 🤖'}
                   </span>
                   <span className="target-health">❤️ {opponent.authority}</span>
-                  {hasOutpost && <span className="outpost-warning">🛡️ Has Outpost</span>}
+                  {hasNonOutpostBase && <span className="outpost-warning">🛡️ Destroy bases first</span>}
                 </div>
 
                 <div className="damage-controls">
                   <button
                     className="btn-control"
                     onClick={() => handleDecrement(opponent.player_id)}
-                    disabled={damage === 0 || hasOutpost}
+                    disabled={damage === 0 || hasNonOutpostBase}
                   >
                     -
                   </button>
@@ -126,19 +126,19 @@ export function DamageDistributor({
                     max={availableCombat}
                     value={damage}
                     onChange={(e) => handleDamageChange(opponent.player_id, e.target.value)}
-                    disabled={hasOutpost}
+                    disabled={hasNonOutpostBase}
                   />
                   <button
                     className="btn-control"
                     onClick={() => handleIncrement(opponent.player_id)}
-                    disabled={remaining === 0 || hasOutpost}
+                    disabled={remaining === 0 || hasNonOutpostBase}
                   >
                     +
                   </button>
                   <button
                     className="btn-max"
                     onClick={() => handleMaxOut(opponent.player_id)}
-                    disabled={remaining === 0 || hasOutpost}
+                    disabled={remaining === 0 || hasNonOutpostBase}
                   >
                     Max
                   </button>

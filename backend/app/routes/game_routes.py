@@ -294,7 +294,10 @@ async def execute_ai_turn(game_id: str):
 
         actions = ai_service_instance._plan_actions(game, current_player)
 
+        waiting_for_human = False
         for action in actions:
+            if waiting_for_human:
+                break
             action_type = action.get("type")
 
             if action_type == "play_all_cards":
@@ -310,6 +313,15 @@ async def execute_ai_turn(game_id: str):
                     game = ai_service_instance._resolve_pending_effect(game, current_player, game_service)
                     await manager.broadcast(game_id, {"type": "ai_card_played", "game": game.model_dump()})
                     await asyncio.sleep(0.45)
+                    # If a pending effect needs human input, stop the AI turn here
+                    if game.pending_effect:
+                        pe_target = game.pending_effect.get('target', 'opponent')
+                        if pe_target != 'self':
+                            target_players = [p for p in game.players if p.player_id != current_player.player_id]
+                            has_human_target = any(not p.is_ai for p in target_players)
+                            if has_human_target:
+                                waiting_for_human = True
+                                break
 
             elif action_type == "buy_cards":
                 cp = game.get_player(current_player.player_id)
@@ -331,6 +343,27 @@ async def execute_ai_turn(game_id: str):
                 opponents = [p for p in game.players if p.player_id != current_player.player_id and p.authority > 0]
                 if opponents and cp.combat > 0:
                     target = min(opponents, key=lambda p: p.authority)
+
+                    # Must destroy non-outpost bases first
+                    non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+                    for base in non_outpost_bases:
+                        cp = game.get_player(current_player.player_id)
+                        if cp.combat >= base.current_defense:
+                            await manager.broadcast(game_id, {
+                                "type": "combat_attack",
+                                "attacker_id": current_player.player_id,
+                                "target_id": target.player_id,
+                                "base_id": base.instance_id,
+                                "damage": base.current_defense,
+                                "game": game.model_dump()
+                            })
+                            await asyncio.sleep(1.2)
+                            game = game_service.attack_base(game.game_id, current_player.player_id, target.player_id, base.instance_id, base.current_defense)
+                            await manager.broadcast(game_id, {"type": "base_attacked", "game": game.model_dump()})
+                            await asyncio.sleep(0.6)
+
+                    # Then attack outposts
+                    target = game.get_player(target.player_id)
                     outposts = [b for b in target.bases if b.is_outpost]
                     for outpost in outposts:
                         cp = game.get_player(current_player.player_id)
@@ -347,8 +380,12 @@ async def execute_ai_turn(game_id: str):
                             game = game_service.attack_base(game.game_id, current_player.player_id, target.player_id, outpost.instance_id, outpost.current_defense)
                             await manager.broadcast(game_id, {"type": "base_attacked", "game": game.model_dump()})
                             await asyncio.sleep(0.6)
+
+                    # Attack player only if no non-outpost bases remain
                     cp = game.get_player(current_player.player_id)
-                    if cp.combat > 0:
+                    target = game.get_player(target.player_id)
+                    remaining_bases = [b for b in target.bases if not b.is_outpost]
+                    if cp.combat > 0 and not remaining_bases:
                         await manager.broadcast(game_id, {
                             "type": "combat_attack",
                             "attacker_id": current_player.player_id,

@@ -113,9 +113,25 @@ class AIService:
                 # Target opponent with lowest health for potential elimination
                 target = min(opponents, key=lambda p: p.authority)
 
-                # Attack outposts first
+                # Must destroy non-outpost bases before attacking player
+                non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+                for base in non_outpost_bases:
+                    current_player = game.get_player(ai_player.player_id)
+                    if current_player.combat >= base.current_defense:
+                        print(f"  ⚔️ Attacking base: {base.name}")
+                        game = game_service.attack_base(
+                            game.game_id,
+                            ai_player.player_id,
+                            target.player_id,
+                            base.instance_id,
+                            base.current_defense
+                        )
+
+                # Attack outposts if combat remains
+                target = game.get_player(target.player_id)
                 outposts = [b for b in target.bases if b.is_outpost]
                 for outpost in outposts:
+                    current_player = game.get_player(ai_player.player_id)
                     if current_player.combat >= outpost.current_defense:
                         print(f"  ⚔️ Attacking outpost: {outpost.name}")
                         game = game_service.attack_base(
@@ -125,10 +141,12 @@ class AIService:
                             outpost.instance_id,
                             outpost.current_defense
                         )
-                        current_player = game.get_player(ai_player.player_id)
 
-                # Attack player with remaining combat
-                if current_player.combat > 0:
+                # Only attack player if no non-outpost bases remain
+                current_player = game.get_player(ai_player.player_id)
+                target = game.get_player(target.player_id)
+                remaining_bases = [b for b in target.bases if not b.is_outpost]
+                if current_player.combat > 0 and not remaining_bases:
                     print(f"  ⚔️ Attacking {target.name} for {current_player.combat} damage")
                     game = game_service.attack_opponent(
                         game.game_id,
@@ -202,9 +220,14 @@ class AIService:
                 game.pending_effect = None
                 return game
 
-            # Discard the opponent's most expensive card
+            # If the target is human, leave pending_effect for them to resolve
+            if not target.is_ai:
+                print(f"  ⏳ Waiting for human {target.name} to choose discard")
+                return game
+
+            # Target is AI — pick their most expensive card
             best = max(target.hand, key=lambda c: c.cost)
-            print(f"  🗑️ AIforcing {target.name} to discard {best.name}")
+            print(f"  🗑️ AI forcing {target.name} to discard {best.name}")
             return game_service.resolve_discard(game.game_id, ai_player.player_id, target.player_id, best.instance_id)
 
         elif effect_type == 'choice':

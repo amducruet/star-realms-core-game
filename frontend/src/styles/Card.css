@@ -198,7 +198,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card-ability {
@@ -266,7 +266,7 @@
 /* ── Scrap button ──────────────────────────────────────── */
 .btn-scrap {
   position: absolute;
-  AItom: 6px;
+  bottom: 6px;
   right: 6px;
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
@@ -290,11 +290,11 @@
 
 /* ── Small (in-play bases) ─────────────────────────────── */
 .card-small {
-  width: 160px;
+  width: clamp(200px, 16vw, 240px);
 }
 
 .card-small .card-art {
-  height: 130px;
+  height: clamp(110px, 11vw, 150px);
 }
 
 .card-small .card-name {
@@ -304,6 +304,7 @@
 .card-small .card-info {
   grid-template-columns: 34px 1px 1fr;
   min-height: 72px;
+  height: auto;
   padding: 0.28rem;
 }
 
@@ -336,6 +337,7 @@
 .card-compact .card-info {
   grid-template-columns: 34px 1px 1fr;
   min-height: 46px;
+  height: auto;
   padding: 0.28rem;
 }
 
