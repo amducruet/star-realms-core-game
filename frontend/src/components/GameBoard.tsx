@@ -277,7 +277,12 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     if (!currentPlayerId) return;
     try {
       const response = await api.resolveDiscard(gameState.game_id, currentPlayerId, targetPlayerId, card.instance_id);
-      if (response.game) onGameUpdate(response.game);
+      if (response.game) {
+        onGameUpdate(response.game);
+        // If the active player is still AI, re-trigger their turn to resume
+        const active = response.game.players[response.game.current_player_index];
+        if (active?.is_ai) setTimeout(() => setAiTrigger(prev => prev + 1), 300);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve discard');
@@ -444,8 +449,8 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           onDistributeDamage={() => setShowDamageDistributor(true)}
         />
 
-        {/* AItom row: sidebar | mine | log */}
-        <div className="game-AItom-row">
+        {/* Bottom row: sidebar | mine | log */}
+        <div className="game-bottom-row">
           <div className="game-zone-left">
             <PlayerSidebar
               players={gameState.players}
