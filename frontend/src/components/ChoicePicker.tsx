@@ -3,11 +3,12 @@ import '../styles/CardPicker.css';
 interface ChoicePickerProps {
   labels: string[];
   onSelect: (index: number) => void;
+  onSkip?: () => void;
 }
 
-export function ChoicePicker({ labels, onSelect }: ChoicePickerProps) {
+export function ChoicePicker({ labels, onSelect, onSkip }: ChoicePickerProps) {
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onClick={onSkip}>
       <div className="card-picker" onClick={(e) => e.stopPropagation()}>
         <h2>Choose One</h2>
         <div className="card-picker-list">
@@ -23,6 +24,11 @@ export function ChoicePicker({ labels, onSelect }: ChoicePickerProps) {
             </div>
           ))}
         </div>
+        {onSkip && (
+          <div className="card-picker-actions">
+            <button className="btn-skip" onClick={onSkip}>Skip</button>
+          </div>
+        )}
       </div>
     </div>
   );

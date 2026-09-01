@@ -326,15 +326,12 @@ class GameService:
         if faction == 'Unaligned':
             return 0
 
-        # Mech World counts as an ally for all factions
-        has_mech_world = any(b.name == 'Mech World' for b in player.bases
-                             if not exclude_card or b.instance_id != exclude_card.instance_id)
-
         count = 0
         for card in list(player.in_play) + list(player.bases):
             if exclude_card and card.instance_id == exclude_card.instance_id:
                 continue
-            if card.faction == faction or (has_mech_world and card.name != 'Mech World'):
+            # Mech World counts as an ally for every faction
+            if card.faction == faction or card.name == 'Mech World':
                 count += 1
 
         return count
@@ -399,7 +396,7 @@ class GameService:
                 'type': 'choice',
                 'options': effect.get('options', []),
                 'labels': effect.get('labels', []),
-                'optional': False,
+                'optional': effect.get('optional', False),
             }
             print(f"  → Pending choice: {effect.get('labels')}")
 
@@ -1151,9 +1148,9 @@ class GameService:
             raise ValueError(f"{card.name} costs {card.cost}, max allowed is {max_cost}")
 
         type_ok = (
-            card_type_filter == 'ship' and card.type != 'Base' or
-            card_type_filter == 'base' and card.type == 'Base' or
-            card_type_filter in ('ship or base', 'any')
+            card_type_filter in ('any', 'ship_or_base', 'ship or base') or
+            (card_type_filter == 'ship' and card.type != 'Base') or
+            (card_type_filter == 'base' and card.type == 'Base')
         )
         if not type_ok:
             raise ValueError(f"{card.name} is not a valid {card_type_filter}")

@@ -9,22 +9,25 @@ interface TradeRowProps {
   currentPlayer: Player | undefined;
   isMyTurn: boolean;
   onAcquire: (card: CardInstance, fromExplorers?: boolean) => void;
+  onScrapSelect?: (card: CardInstance) => void;
 }
 
-export function TradeRow({ tradeRow, explorerPile, scrapHeap, currentPlayer, isMyTurn, onAcquire }: TradeRowProps) {
+export function TradeRow({ tradeRow, explorerPile, scrapHeap, currentPlayer, isMyTurn, onAcquire, onScrapSelect }: TradeRowProps) {
   const canAfford = (cost: number) => isMyTurn && !!currentPlayer && currentPlayer.trade >= cost;
 
   return (
     <div className="trade-row-zone">
       <div className="trade-row-section">
-        <span className="trade-zone-label">Trade Row</span>
+        <span className="trade-zone-label">
+          Trade Row {onScrapSelect && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginLeft: '6px' }}>— Click a card to scrap it</span>}
+        </span>
         <div className="trade-row-cards">
           {tradeRow.map((card, i) => (
             <Card
               key={card.instance_id}
               card={card}
-              onClick={() => onAcquire(card)}
-              clickable={canAfford(card.cost)}
+              onClick={onScrapSelect ? () => onScrapSelect(card) : () => onAcquire(card)}
+              clickable={onScrapSelect ? true : canAfford(card.cost)}
               enterIndex={i}
             />
           ))}
@@ -38,7 +41,7 @@ export function TradeRow({ tradeRow, explorerPile, scrapHeap, currentPlayer, isM
             <Card
               card={explorerPile[0]}
               onClick={() => onAcquire(explorerPile[0], true)}
-              clickable={canAfford(2)}
+              clickable={!onScrapSelect && canAfford(2)}
               count={explorerPile.length}
             />
           ) : (

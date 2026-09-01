@@ -56,18 +56,39 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     const playAll = async () => {
       autoPlayingRef.current = true;
       let state = gameState;
-      for (const card of [...currentPlayer.hand]) {
-        if (state.pending_effect) break;
+
+      // Play cards one at a time until hand is empty or a pending effect arises.
+      // Uses a while loop so newly drawn cards (from ally effects etc.) are also played.
+      while (true) {
+        const player = state.players.find(p => p.player_id === currentPlayerId);
+        if (!player || player.hand.length === 0 || state.pending_effect) break;
+        const card = player.hand[0];
         try {
           const response = await api.playCard(state.game_id, currentPlayerId, card.instance_id);
           if (response.game) {
             state = response.game;
             onGameUpdate(response.game);
+          } else {
+            break;
           }
         } catch {
           break;
         }
       }
+
+      // Auto-end turn when nothing remains to do
+      if (!state.pending_effect) {
+        const player = state.players.find(p => p.player_id === currentPlayerId);
+        if (player && player.hand.length === 0 && player.trade === 0 && player.combat === 0) {
+          try {
+            const response = await api.endTurn(state.game_id, currentPlayerId);
+            if (response.game) onGameUpdate(response.game);
+          } catch {
+            // ignore — player can end turn manually
+          }
+        }
+      }
+
       autoPlayingRef.current = false;
     };
 
@@ -433,6 +454,11 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           currentPlayer={currentPlayer}
           isMyTurn={isMyTurn}
           onAcquire={handleAcquireCard}
+          onScrapSelect={
+            isMyTurn && gameState.pending_effect?.type === 'scrap_card' && gameState.pending_effect?.location === 'trade_row'
+              ? (card) => handleResolveScrap(card, 'trade_row')
+              : undefined
+          }
         />
       </div>
 
@@ -489,34 +515,46 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
         />
       )}
 
+      {/* Pending Effect Modal — opponent choosing their own discard */}
+      {gameState.pending_effect?.type === 'discard_card' && gameState.pending_effect?.target === 'opponent' && !isMyTurn && currentPlayer && currentPlayerId && (() => {
+        if (currentPlayer.hand.length === 0) return null;
+        return (
+          <CardPicker
+            title="Discard a Card"
+            subtitle="Your opponent is forcing you to discard. Choose a card from your hand."
+            cards={currentPlayer.hand}
+            onSelect={(card) => handleResolveDiscard(card, currentPlayerId)}
+            isOptional={false}
+          />
+        );
+      })()}
+
       {/* Pending Effect Modal */}
       {gameState.pending_effect && isMyTurn && currentPlayer && (() => {
         const pe = gameState.pending_effect!;
         if (pe.type === 'scrap_card') {
           const loc = pe.location ?? 'hand';
+          // trade_row scraps are handled via direct TradeRow clicks — no modal needed here
+          if (loc === 'trade_row') return null;
+
           let cards: CardInstance[];
           let getLocation: (card: CardInstance) => string;
-          if (loc === 'trade_row') {
-            cards = gameState.trade_row;
-            getLocation = () => 'trade_row';
-          } else if (loc === 'hand') {
+          if (loc === 'hand') {
             cards = currentPlayer.hand;
             getLocation = () => 'hand';
           } else if (loc === 'discard') {
             cards = currentPlayer.discard_pile;
             getLocation = () => 'discard';
           } else {
+            // hand_or_discard — show both
             cards = [...currentPlayer.hand, ...currentPlayer.discard_pile];
             getLocation = (card) =>
               currentPlayer.hand.some(c => c.instance_id === card.instance_id) ? 'hand' : 'discard';
           }
-          const subtitle = loc === 'trade_row'
-            ? 'Choose a card from the trade row to scrap'
-            : `Choose a card from your ${loc.replace('_', ' ')} to scrap`;
           return (
             <CardPicker
               title="Scrap a Card"
-              subtitle={subtitle}
+              subtitle={`Choose a card from your ${loc.replace('_', ' ')} to scrap`}
               cards={cards}
               onSelect={(card) => handleResolveScrap(card, getLocation(card))}
               onSkip={pe.optional ? handleSkipEffect : undefined}
@@ -537,26 +575,14 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
               />
             );
           }
-          if (opponents.length === 0) return null;
-          const allCards = opponents.flatMap(o => o.hand);
-          const ownerById: Record<string, string> = {};
-          const playerByCard: Record<string, string> = {};
-          for (const opp of opponents) {
-            for (const card of opp.hand) {
-              ownerById[card.instance_id] = opp.name;
-              playerByCard[card.instance_id] = opp.player_id;
-            }
-          }
+          // opponent discard: show a waiting message to the current player
           return (
-            <CardPicker
-              title="Choose a Card to Discard"
-              subtitle={opponents.length === 1 ? `Choose a card from ${opponents[0].name}'s hand` : "Choose a card from an opponent's hand"}
-              cards={allCards}
-              cardOwners={opponents.length > 1 ? ownerById : undefined}
-              onSelect={(card) => handleResolveDiscard(card, playerByCard[card.instance_id])}
-              onSkip={pe.optional ? handleSkipEffect : undefined}
-              isOptional={pe.optional}
-            />
+            <div className="modal-overlay">
+              <div className="card-picker" style={{ textAlign: 'center' }}>
+                <h2>Waiting…</h2>
+                <p className="card-picker-subtitle">Your opponent is choosing a card to discard.</p>
+              </div>
+            </div>
           );
         }
         if (pe.type === 'destroy_base') {
@@ -587,6 +613,7 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
             <ChoicePicker
               labels={labels}
               onSelect={handleResolveChoice}
+              onSkip={pe.optional ? handleSkipEffect : undefined}
             />
           );
         }

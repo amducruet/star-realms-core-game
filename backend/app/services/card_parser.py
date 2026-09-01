@@ -65,12 +65,13 @@ class ParsedAbility:
             self.is_choice = True
             option_a = ParsedAbility(or_match[0].strip())
             option_b = ParsedAbility(or_match[1].strip())
-            # Only emit a choice if AIh sides parsed at least one known effect
+            # Only emit a choice if both sides parsed at least one known effect
             if option_a.effects and option_b.effects:
                 self.effects.append({
                     'type': EffectType.CHOICE,
                     'options': [option_a.effects, option_b.effects],
                     'labels': [or_match[0].strip(), or_match[1].strip()],
+                    'optional': self.is_optional,
                 })
                 return
             # Fallback: unknown option shape, parse whole text normally
