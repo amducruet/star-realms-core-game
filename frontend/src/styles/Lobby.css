@@ -1,9 +1,11 @@
 /* Lobby styles */
 .lobby {
+  flex: 1 0 auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 60vh;
+  min-height: 100%;
+  padding: clamp(32px, 6vh, 64px) 24px;
 }
 
 .lobby-card {
@@ -18,7 +20,7 @@
 
 .lobby-card h2 {
   text-align: center;
-  margin-AItom: 2rem;
+  margin-bottom: 2rem;
   font-size: 2rem;
 }
 
@@ -76,7 +78,7 @@
 .lobby-tabs {
   display: flex;
   gap: 0.5rem;
-  margin-AItom: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .lobby-tab {
@@ -162,7 +164,7 @@
 }
 
 .players-list h4 {
-  margin-AItom: 1rem;
+  margin-bottom: 1rem;
   text-align: left;
 }
 

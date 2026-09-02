@@ -33,6 +33,14 @@ function formatAction(action: GameAction, gameState: GameState): string {
     case 'base_attacked':
       return `${playerName} destroyed ${action.data.card_name || 'a base'}`;
 
+    case 'discard_card': {
+      const target = gameState.players.find(
+        (p) => p.player_id === action.data.target_player_id,
+      );
+      const targetName = target?.name || playerName;
+      return `${targetName} discarded ${action.data.card_name || 'a card'}`;
+    }
+
     default:
       return `${playerName}: ${action.action_type}`;
   }

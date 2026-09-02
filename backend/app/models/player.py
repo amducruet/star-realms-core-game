@@ -31,6 +31,7 @@ class Player(BaseModel):
     next_acquire_to_top_type: str = 'any'  # 'ship', 'base', or 'any'
     faction_played_count: Dict[str, int] = Field(default_factory=dict)  # faction -> ships played this turn
     scrapped_this_turn: int = 0
+    bases_settled_this_turn: bool = False
 
     class Config:
         frozen = False

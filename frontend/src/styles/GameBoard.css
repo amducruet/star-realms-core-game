@@ -3,18 +3,62 @@
 .game-board {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
   grid-template-areas:
     "top"
     "center";
   gap: 0.75rem;
   padding: 1rem;
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  width: 100%;
+  min-height: 100%;
   overflow: visible;
+  align-content: start;
 }
 
 .game-zone-top  { grid-area: top; position: relative; }
+
+.game-zone-top,
+.game-zone-center,
+.game-bottom-row,
+.game-bottom-row > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.trade-row-scrap-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.7rem 1rem;
+  color: #fee2e2;
+  background: rgba(69, 10, 10, 0.94);
+  border: 1px solid rgba(248, 113, 113, 0.75);
+  border-radius: 10px;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.2);
+}
+
+.trade-row-scrap-prompt div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.trade-row-scrap-prompt span {
+  color: #fecaca;
+  font-size: 0.82rem;
+}
+
+.trade-row-scrap-prompt button {
+  padding: 0.4rem 0.8rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 7px;
+  cursor: pointer;
+}
 
 .game-zone-left {
   width: 240px;
@@ -40,7 +84,6 @@
   gap: 0.75rem;
   align-items: stretch;
   flex-shrink: 0;
-  padding-bottom: 2rem;
 }
 
 /* CombatZone scrolls, AuthorityBar stays pinned */
@@ -196,4 +239,55 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+/* Laptop / compact desktop: keep the three-column composition while making
+   its fixed side rails fit a narrower CSS viewport (including Retina screens). */
+@media (min-width: 901px) and (max-width: 1400px) {
+  .game-bottom-row {
+    grid-template-columns: 190px minmax(0, 1fr) 190px;
+  }
+
+  .game-zone-left,
+  .game-zone-right {
+    width: 190px;
+  }
+}
+
+/* Tablet: preserve the game board, but give the play area priority and move
+   the activity log to a full-width row below it. */
+@media (min-width: 700px) and (max-width: 900px) {
+  .game-board {
+    gap: 0.6rem;
+    padding: 0.75rem;
+  }
+
+  .game-bottom-row {
+    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar mine"
+      "log log";
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .game-zone-left {
+    grid-area: sidebar;
+    width: 190px;
+  }
+
+  .game-bottom-row > .combat-mine-section {
+    grid-area: mine;
+    min-width: 0;
+  }
+
+  .game-zone-right {
+    grid-area: log;
+    width: 100%;
+    height: 140px;
+  }
+
+  .trade-row-scrap-prompt {
+    margin-inline: 0.5rem;
+  }
 }

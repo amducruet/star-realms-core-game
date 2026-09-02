@@ -1,7 +1,7 @@
 """
 Card models.
 """
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -33,6 +33,7 @@ class CardInstance(BaseModel):
 
     # Instance-specific state (for bases in play)
     current_defense: Optional[int] = None  # For bases in play
+    additional_factions: List[str] = Field(default_factory=list)
 
     class Config:
         frozen = False  # Allow modification for current_defense

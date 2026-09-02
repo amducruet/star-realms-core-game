@@ -13,6 +13,7 @@ export interface CardInstance {
   is_outpost: boolean;
   text: string;
   current_defense: number | null;
+  additional_factions?: string[];
 }
 
 export interface Player {
@@ -22,6 +23,7 @@ export interface Player {
   deck: CardInstance[];
   hand: CardInstance[];
   discard_pile: CardInstance[];
+  bases_settled_this_turn?: boolean;
   in_play: CardInstance[];
   bases: CardInstance[];
   combat: number;
@@ -65,6 +67,7 @@ export interface GameState {
   pending_effect: {
     type: 'scrap_card' | 'discard_card' | 'choice' | 'acquire_free_to_top' | 'base_from_discard_to_top' | 'discard_any_number' | 'copy_ship' | 'destroy_base';
     location?: 'hand' | 'discard' | 'hand_or_discard' | 'trade_row';
+    target_player_id?: string;
     target?: 'opponent' | 'self';
     optional: boolean;
     triggered_by?: string;
@@ -74,7 +77,13 @@ export interface GameState {
     max_cost?: number;
     per_discard_effects?: any[];
     on_complete_effects?: any[];
+    batch_scrap?: boolean;
+    source_name?: string;
+    eligible_instance_ids?: string[];
+    batch_copy?: boolean;
   } | null;
+  play_batch?: Record<string, any> | null;
+  base_activation?: Record<string, any> | null;
 }
 
 export interface WSMessage {

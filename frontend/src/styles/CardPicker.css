@@ -1,3 +1,16 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
 .card-picker {
   background: #1a1a2e;
   border: 2px solid #ffd700;
@@ -19,7 +32,7 @@
   text-align: center;
   color: #aaa;
   font-size: 14px;
-  margin-AItom: 20px;
+  margin-bottom: 20px;
 }
 
 .card-picker-list {
@@ -28,7 +41,7 @@
   gap: 10px;
   max-height: 420px;
   overflow-y: auto;
-  margin-AItom: 20px;
+  margin-bottom: 20px;
 }
 
 .card-picker-item {
@@ -100,4 +113,17 @@
   background: rgba(136, 136, 136, 0.2);
   border-color: #aaa;
   color: #aaa;
+}
+
+@media (min-width: 700px) and (max-width: 1100px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .card-picker {
+    width: min(640px, 100%);
+    min-width: 0;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+  }
 }

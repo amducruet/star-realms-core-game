@@ -200,6 +200,235 @@ class GameService:
                 card = player.deck.pop(0)
                 player.hand.append(card)
 
+    def play_hand_batch(self, game_id: str, player_id: str) -> GameState:
+        """Play the hand as an order-independent batch, pausing for decisions."""
+        game = self.games.get(game_id)
+        if not game:
+            raise ValueError(f"Game {game_id} not found")
+        player = game.get_player(player_id)
+        if not player or game.current_player.player_id != player_id:
+            raise ValueError("Not your turn")
+        if game.pending_effect:
+            raise ValueError(f"Must resolve pending effect: {game.pending_effect['type']}")
+
+        if not player.bases_settled_this_turn:
+            # Existing bases share the human pre-settlement window with hand
+            # cards: scrap first, or cash their recurring effects now.
+            player.bases_settled_this_turn = True
+            self._activate_bases(player, game)
+
+        if game.base_activation:
+            self._advance_base_activation(player, game)
+            if game.pending_effect or game.base_activation:
+                return game
+
+        if not game.play_batch:
+            if not player.hand:
+                return game
+            game.play_batch = {
+                'player_id': player_id,
+                'card_ids': [card.instance_id for card in player.hand],
+                'decisions': {},
+                'skipped': [],
+                'copies': {},
+                'phase': 'copying',
+            }
+
+        if game.play_batch.get('player_id') != player_id:
+            raise ValueError("Another player's hand batch is active")
+        return self._advance_play_batch(game, player)
+
+    def _batch_scrap_effects(self, player: Player, game: GameState, survivor_ids: set) -> list:
+        """Return scrap opportunities supplied by cards still surviving the batch."""
+        batch_cards = [card for card in player.hand if card.instance_id in survivor_ids]
+        effects = []
+        for card in batch_cards:
+            copied_id = game.play_batch.get('copies', {}).get(card.instance_id)
+            copied_card = next((candidate for candidate in batch_cards if candidate.instance_id == copied_id), None)
+            ability_card = copied_card or card
+            faction = ability_card.faction
+            parsed = parse_card(ability_card.text, faction)
+            allies = self._count_allies(player, faction)
+            for other in batch_cards:
+                if other.instance_id != card.instance_id and (
+                    self._batch_card_has_faction(other, faction, game.play_batch, batch_cards) or other.name == 'Mech World'
+                ):
+                    allies += 1
+            card_effects = parsed.get_primary_effects() + parsed.get_ally_effects(allies)
+            scrap_effects = [effect for effect in card_effects if effect.get('type') == EffectType.SCRAP_CARD]
+            for index, effect in enumerate(scrap_effects):
+                effects.append((f"{card.instance_id}:{index}", card, effect))
+        return effects
+
+    def _batch_card_has_faction(self, card: CardInstance, faction: str, batch: dict, batch_cards: list) -> bool:
+        if self._card_has_faction(card, faction):
+            return True
+        copied_id = batch.get('copies', {}).get(card.instance_id)
+        copied = next((candidate for candidate in batch_cards if candidate.instance_id == copied_id), None)
+        return bool(copied and copied.faction == faction)
+
+    def _advance_play_batch(self, game: GameState, player: Player) -> GameState:
+        batch = game.play_batch
+        if not batch:
+            return game
+
+        if batch.get('phase') == 'copying':
+            batch_cards = [card for card in player.hand if card.instance_id in batch['card_ids']]
+            for needle in (card for card in batch_cards if card.name == 'Stealth Needle'):
+                if needle.instance_id in batch['copies']:
+                    continue
+                candidates = [
+                    card.instance_id for card in batch_cards
+                    if card.instance_id != needle.instance_id and card.type != 'Base' and card.name != 'Stealth Needle'
+                ]
+                if not candidates:
+                    continue
+                batch['current_copy_source'] = needle.instance_id
+                game.pending_effect = {
+                    'type': 'copy_ship',
+                    'optional': False,
+                    'batch_copy': True,
+                    'source_name': needle.name,
+                    'eligible_instance_ids': candidates,
+                }
+                return game
+            batch['phase'] = 'scrapping'
+
+        if batch.get('phase') == 'scrapping':
+            # Recompute until decisions made by cards that were themselves
+            # scrapped have been removed (strict batch semantics).
+            while True:
+                decisions = batch['decisions']
+                targeted_batch_ids = {
+                    value['instance_id'] for value in decisions.values()
+                    if value.get('location') == 'hand'
+                }
+                survivor_ids = set(batch['card_ids']) - targeted_batch_ids
+                active = {key: (source, effect) for key, source, effect in self._batch_scrap_effects(player, game, survivor_ids)}
+                stale = [key for key in decisions if key not in active]
+                stale_skips = [key for key in batch['skipped'] if key not in active]
+                if not stale and not stale_skips:
+                    break
+                for key in stale:
+                    decisions.pop(key, None)
+                batch['skipped'] = [key for key in batch['skipped'] if key in active]
+
+            reserved_ids = {value['instance_id'] for value in batch['decisions'].values()}
+            for key, (source, effect) in active.items():
+                if key in batch['decisions'] or key in batch['skipped']:
+                    continue
+                location = effect.get('location', 'hand')
+                candidates = []
+                if location in ('hand', 'hand_or_discard'):
+                    candidates.extend(
+                        card.instance_id for card in player.hand
+                        if card.instance_id in survivor_ids
+                        and card.instance_id != source.instance_id
+                        and card.instance_id not in reserved_ids
+                    )
+                if location in ('discard', 'hand_or_discard'):
+                    candidates.extend(card.instance_id for card in player.discard_pile if card.instance_id not in reserved_ids)
+                if location == 'trade_row':
+                    candidates.extend(card.instance_id for card in game.trade_row if card.instance_id not in reserved_ids)
+                if not candidates:
+                    batch['skipped'].append(key)
+                    continue
+                batch['current_effect_key'] = key
+                game.pending_effect = {
+                    **effect,
+                    'type': 'scrap_card',
+                    'optional': effect.get('optional', False),
+                    'batch_scrap': True,
+                    'source_name': source.name,
+                    'eligible_instance_ids': candidates,
+                }
+                return game
+
+            # All surviving scrap sources have decisions. Apply the decisions
+            # now, before any normal card abilities are awarded.
+            active_keys = set(active)
+            for key, decision in list(batch['decisions'].items()):
+                if key not in active_keys:
+                    continue
+                card = self._remove_scrap_target(player, game, decision['instance_id'], decision['location'])
+                game.scrap_heap.append(card)
+                player.scrapped_this_turn += 1
+                if decision['location'] == 'hand':
+                    parsed = parse_card(card.text, card.faction)
+                    for scrap_effect in parsed.get_scrap_effects():
+                        self._execute_effect(player, scrap_effect, game)
+                game.action_log.append(GameAction(
+                    action_id=str(uuid.uuid4()), action_type="scrap_card", player_id=player.player_id,
+                    timestamp=time.time(), data={"instance_id": card.instance_id, "card_name": card.name,
+                                                 "from_location": decision['location']}
+                ))
+            batch['phase'] = 'playing'
+            batch.pop('current_effect_key', None)
+
+        # Play surviving original cards. Ordinary pending effects pause here;
+        # calling play_hand_batch after they clear resumes this same batch.
+        while not game.pending_effect:
+            next_card = next((card for card in player.hand if card.instance_id in batch['card_ids']), None)
+            if not next_card:
+                game.play_batch = None
+                # Cards drawn during play form a fresh batch. Human players
+                # get a new pre-settlement window in which they may use a
+                # printed Scrap ability; Robots continue through their loop.
+                return game
+            copied_id = batch.get('copies', {}).get(next_card.instance_id)
+            copied_card = next((
+                card for card in list(player.hand) + list(player.in_play) + list(game.scrap_heap)
+                if card.instance_id == copied_id
+            ), None)
+            if copied_card and copied_card.faction not in ('Unaligned', next_card.faction):
+                if copied_card.faction not in next_card.additional_factions:
+                    next_card.additional_factions.append(copied_card.faction)
+            self.play_card(game.game_id, player.player_id, next_card.instance_id)
+            if copied_card:
+                player.faction_played_count[copied_card.faction] = player.faction_played_count.get(copied_card.faction, 0) + 1
+                self._apply_copied_ship_effects(player, next_card, copied_card, game)
+        return game
+
+    def _apply_copied_ship_effects(self, player: Player, needle: CardInstance, copied: CardInstance, game: GameState):
+        """Apply the selected ship's abilities as Stealth Needle's abilities."""
+        parsed = parse_card(copied.text, copied.faction)
+        for effect in parsed.get_primary_effects():
+            self._execute_effect(player, effect, game)
+        ally_count = self._count_allies(player, copied.faction, exclude_card=needle)
+        if game.play_batch:
+            targeted = {
+                decision['instance_id'] for decision in game.play_batch.get('decisions', {}).values()
+                if decision.get('location') == 'hand'
+            }
+            for card in player.hand:
+                if (
+                    card.instance_id in game.play_batch.get('card_ids', [])
+                    and card.instance_id not in targeted
+                    and card.instance_id != needle.instance_id
+                    and (self._batch_card_has_faction(card, copied.faction, game.play_batch, list(player.hand))
+                         or card.name == 'Mech World')
+                ):
+                    ally_count += 1
+        for effect in parsed.get_ally_effects(ally_count):
+            self._execute_effect(player, effect, game)
+
+    def _remove_scrap_target(self, player: Player, game: GameState, instance_id: str, location: str) -> CardInstance:
+        zones = {
+            'hand': player.hand,
+            'discard': player.discard_pile,
+            'trade_row': game.trade_row,
+        }
+        zone = zones.get(location)
+        if zone is None:
+            raise ValueError(f"Invalid scrap location: {location}")
+        card = next((candidate for candidate in zone if candidate.instance_id == instance_id), None)
+        if not card:
+            raise ValueError(f"Card {instance_id} not found in {location}")
+        zone.remove(card)
+        if location == 'trade_row' and game.trade_deck:
+            game.trade_row.append(game.trade_deck.pop(0))
+        return card
+
     def play_card(self, game_id: str, player_id: str, instance_id: str) -> GameState:
         """Play a card from hand."""
         game = self.games.get(game_id)
@@ -215,6 +444,9 @@ class GameService:
 
         if game.turn_phase != TurnPhase.MAIN:
             raise ValueError("Can only play cards during main phase")
+
+        if game.pending_effect:
+            raise ValueError(f"Must resolve pending effect before playing another card: {game.pending_effect['type']}")
 
         # Find card in hand
         card = None
@@ -282,15 +514,16 @@ class GameService:
 
         # Retroactively fire ally abilities on previously played cards of the same faction
         # that now have their threshold met by this new card
-        if card.faction != 'Unaligned':
-            self._trigger_retroactive_ally(player, card, game)
+        for faction in [card.faction, *card.additional_factions]:
+            if faction != 'Unaligned':
+                self._trigger_retroactive_ally(player, card, game, faction)
 
-    def _trigger_retroactive_ally(self, player: Player, new_card: CardInstance, game=None):
+    def _trigger_retroactive_ally(self, player: Player, new_card: CardInstance, game=None, faction: Optional[str] = None):
         """
         When a new card is played, check all previously played same-faction cards
         and fire their ally/double-ally abilities if this card pushes them over threshold.
         """
-        faction = new_card.faction
+        faction = faction or new_card.faction
         # Total allies NOW (including the new card)
         total = self._count_allies(player, faction, exclude_card=None)
         # Total allies BEFORE this card was added
@@ -299,7 +532,7 @@ class GameService:
         for existing_card in list(player.in_play) + list(player.bases):
             if existing_card.instance_id == new_card.instance_id:
                 continue
-            if existing_card.faction != faction:
+            if not self._card_has_faction(existing_card, faction):
                 continue
 
             # Allies available to existing_card now (total minus itself)
@@ -326,18 +559,19 @@ class GameService:
         if faction == 'Unaligned':
             return 0
 
-        # Mech World counts as an ally for all factions
-        has_mech_world = any(b.name == 'Mech World' for b in player.bases
-                             if not exclude_card or b.instance_id != exclude_card.instance_id)
-
         count = 0
         for card in list(player.in_play) + list(player.bases):
             if exclude_card and card.instance_id == exclude_card.instance_id:
                 continue
-            if card.faction == faction or (has_mech_world and card.name != 'Mech World'):
+            # Mech World counts as an ally for every faction
+            if self._card_has_faction(card, faction) or card.name == 'Mech World':
                 count += 1
 
         return count
+
+    @staticmethod
+    def _card_has_faction(card: CardInstance, faction: str) -> bool:
+        return card.faction == faction or faction in card.additional_factions
 
     def _execute_effect(self, player: Player, effect: Dict[str, Any], game=None):
         """Execute a single card effect."""
@@ -369,15 +603,34 @@ class GameService:
             print(f"  → Next {effect.get('card_type','ship')} acquired will go to top of deck")
 
         elif effect_type == EffectType.ACQUIRE_FREE_TO_TOP and game is not None:
+            card_type = effect.get('card_type', 'ship')
+            max_cost = effect.get('max_cost', 999)
+            eligible = [
+                card for card in game.trade_row
+                if card.cost <= max_cost and (
+                    (card_type == 'ship' and card.type != 'Base') or
+                    (card_type == 'base' and card.type == 'Base') or
+                    card_type in ('ship or base', 'any')
+                )
+            ]
+            explorer_eligible = (
+                card_type in ('ship', 'ship or base', 'any') and
+                bool(game.explorer_pile) and
+                game.explorer_pile[0].cost <= max_cost
+            )
+            if not eligible and not explorer_eligible:
+                return
             game.pending_effect = {
                 'type': 'acquire_free_to_top',
-                'card_type': effect.get('card_type', 'ship'),
-                'max_cost': effect.get('max_cost', 999),
+                'card_type': card_type,
+                'max_cost': max_cost,
                 'optional': False,
             }
             print(f"  → Pending acquire-free-to-top: {effect.get('card_type')} cost<={effect.get('max_cost',999)}")
 
         elif effect_type == EffectType.BASE_FROM_DISCARD_TO_TOP and game is not None:
+            if not any(card.type == 'Base' for card in player.discard_pile):
+                return
             game.pending_effect = {
                 'type': 'base_from_discard_to_top',
                 'optional': effect.get('optional', False),
@@ -395,18 +648,31 @@ class GameService:
                     print(f"  → Conditional not met ({len(player.bases)} bases < {effect.get('min_bases')})")
 
         elif effect_type == EffectType.CHOICE and game is not None:
+            options = effect.get('options', [])
+            if not options:
+                return
             game.pending_effect = {
                 'type': 'choice',
-                'options': effect.get('options', []),
+                'options': options,
                 'labels': effect.get('labels', []),
-                'optional': False,
+                'optional': effect.get('optional', False),
             }
             print(f"  → Pending choice: {effect.get('labels')}")
 
         elif effect_type == EffectType.SCRAP_CARD and game is not None:
+            if game.play_batch and game.play_batch.get('phase') == 'playing':
+                return
+            location = effect.get('location', 'hand')
+            has_target = (
+                (location == 'trade_row' and bool(game.trade_row)) or
+                (location in ('hand', 'hand_or_discard') and bool(player.hand)) or
+                (location in ('discard', 'hand_or_discard') and bool(player.discard_pile))
+            )
+            if not has_target:
+                return
             game.pending_effect = {
                 'type': 'scrap_card',
-                'location': effect.get('location', 'hand'),
+                'location': location,
                 'optional': effect.get('optional', False),
                 'gain_cost_as_combat': effect.get('gain_cost_as_combat', False),
                 'on_resolve_effects': effect.get('on_resolve_effects', []),
@@ -417,15 +683,34 @@ class GameService:
             print(f"  → Pending scrap effect: location={effect.get('location', 'hand')}")
 
         elif effect_type == EffectType.DISCARD_CARD and game is not None:
+            target_type = effect.get('target', 'opponent')
+            if target_type == 'self':
+                has_target = bool(player.hand)
+                target_player_id = player.player_id
+            else:
+                targets = [
+                    candidate for candidate in game.players
+                    if candidate.player_id != player.player_id and candidate.authority > 0 and candidate.hand
+                ]
+                has_target = bool(targets)
+                # Star Realms is normally two-player. Keeping the selected
+                # target on the pending effect also prevents another client
+                # from answering this player's discard choice.
+                target_player_id = targets[0].player_id if targets else None
+            if not has_target:
+                return
             game.pending_effect = {
                 'type': 'discard_card',
-                'target': effect.get('target', 'opponent'),
+                'target': target_type,
+                'target_player_id': target_player_id,
                 'amount': effect.get('amount', 1),
                 'optional': effect.get('optional', False),
             }
             print(f"  → Pending discard effect: target={effect.get('target', 'opponent')}")
 
         elif effect_type == EffectType.DESTROY_BASE and game is not None:
+            if not any(p.player_id != player.player_id and p.authority > 0 and p.bases for p in game.players):
+                return
             game.pending_effect = {
                 'type': 'destroy_base',
                 'optional': effect.get('optional', False),
@@ -456,6 +741,8 @@ class GameService:
             print(f"  → Pending discard_any_number effect")
 
         elif effect_type == EffectType.COPY_SHIP and game is not None:
+            if game.play_batch and game.play_batch.get('phase') == 'playing':
+                return
             ships = [c for c in player.in_play if c.name != 'Stealth Needle' and c.type != 'Base']
             if ships:
                 game.pending_effect = {
@@ -564,10 +851,10 @@ class GameService:
             raise ValueError("Not enough combat")
 
         # Non-outpost bases must be destroyed before attacking the player directly
-        # Outposts are optional — player can choose to attack player or outpost in any order
+        # Outposts do not block direct player attacks
         non_outpost_bases = [b for b in target.bases if not b.is_outpost]
         if non_outpost_bases:
-            raise ValueError("Must destroy all bases before attacking player")
+            raise ValueError("Must destroy all non-outpost bases before attacking player")
 
         # Deal damage
         player.combat -= damage
@@ -629,10 +916,10 @@ class GameService:
             if not target:
                 raise ValueError(f"Target player {target_player_id} not found")
 
-            # Check if target has outposts that must be attacked first
-            outposts = [b for b in target.bases if b.is_outpost]
-            if outposts:
-                raise ValueError(f"{target.name} has outposts that must be destroyed first")
+            # Non-outpost bases must be destroyed before dealing direct damage
+            non_outpost_bases = [b for b in target.bases if not b.is_outpost]
+            if non_outpost_bases:
+                raise ValueError(f"{target.name} has bases that must be destroyed first")
 
         # Apply damage to all targets
         for target_data in targets:
@@ -735,15 +1022,22 @@ class GameService:
         if game.current_player.player_id != player_id:
             raise ValueError("Not your turn")
 
-        # Find card in play or bases
+        # Find card in hand, in play, or bases.
         card = None
         location = None
 
-        for c in player.in_play:
+        for c in player.hand:
             if c.instance_id == instance_id:
                 card = c
-                location = 'in_play'
+                location = 'hand'
                 break
+
+        if not card:
+            for c in player.in_play:
+                if c.instance_id == instance_id:
+                    card = c
+                    location = 'in_play'
+                    break
 
         if not card:
             for c in player.bases:
@@ -753,7 +1047,14 @@ class GameService:
                     break
 
         if not card:
-            raise ValueError(f"Card {instance_id} not in play or bases")
+            raise ValueError(f"Card {instance_id} not in hand, play, or bases")
+
+        if location == 'hand' and (game.play_batch or game.pending_effect):
+            raise ValueError("Cannot scrap a hand card while its batch is being resolved")
+        if location == 'in_play':
+            raise ValueError(f"{card.name}'s benefits have already been cashed in")
+        if location == 'bases' and player.bases_settled_this_turn:
+            raise ValueError(f"{card.name}'s benefits have already been cashed in")
 
         # Parse card to check for scrap ability
         parsed_card = parse_card(card.text, card.faction)
@@ -762,7 +1063,9 @@ class GameService:
             raise ValueError(f"{card.name} has no scrap ability")
 
         # Remove card from current location
-        if location == 'in_play':
+        if location == 'hand':
+            player.hand.remove(card)
+        elif location == 'in_play':
             player.in_play.remove(card)
         else:
             player.bases.remove(card)
@@ -805,11 +1108,23 @@ class GameService:
         if game.current_player.player_id != player_id:
             raise ValueError("Not your turn")
 
-        # Block end turn if there's a mandatory pending effect
-        if game.pending_effect and not game.pending_effect.get('optional', False):
+        # Recover a batch whose last server-side pending effect was resolved
+        # automatically (for example, an AI opponent's forced discard).
+        if game.play_batch and not game.pending_effect:
+            self._advance_play_batch(game, player)
+
+        # A batch must be completed (including optional decisions) before its
+        # cards can be discarded at end of turn.
+        if game.pending_effect:
             raise ValueError(f"Must resolve pending effect: {game.pending_effect['type']}")
+        if game.play_batch:
+            raise ValueError("Must finish playing the current hand batch")
+        if game.base_activation:
+            raise ValueError("Must finish activating your bases")
 
         # Discard hand and played cards
+        for card in list(player.hand) + list(player.in_play) + list(player.bases):
+            card.additional_factions.clear()
         player.discard_pile.extend(player.hand)
         player.discard_pile.extend(player.in_play)
         player.hand.clear()
@@ -854,44 +1169,46 @@ class GameService:
 
         game.turn_phase = TurnPhase.MAIN
 
-        # Activate base effects for the new current player (bases carried over from previous turns)
-        self._activate_bases(game.current_player, game)
+        # The next player chooses whether to scrap each existing base before
+        # settling its recurring effects with Play Hand.
+        game.current_player.bases_settled_this_turn = False
 
         return game
 
-    # Effect types that are one-time-play bonuses and must NOT re-fire every turn from a base
-    _BASE_EXCLUDED_EFFECTS = {
-        EffectType.DRAW_CARDS,
-        EffectType.NEXT_ACQUIRE_TO_TOP,
-        EffectType.ACQUIRE_FREE_TO_TOP,
-        EffectType.SCRAP_CARD,
-        EffectType.DISCARD_CARD,
-        EffectType.DISCARD_ANY_NUMBER,
-        EffectType.BASE_FROM_DISCARD_TO_TOP,
-    }
-
     def _activate_bases(self, player, game):
-        """Fire persistent effects for all bases the player has in play at the start of their turn.
-
-        Only ongoing resource effects (combat, trade, authority, conditional resource bonuses,
-        draw-per-faction, etc.) should fire here. One-time play bonuses like draw-a-card,
-        scrap effects, and acquire effects must NOT re-trigger each turn.
-        """
+        """Start recurring activation of every in-play base."""
         if not player.bases:
             return
         print(f"🏰 Activating {len(player.bases)} base(s) for {player.name}")
+        queued_effects = []
         for base in list(player.bases):
             parsed = parse_card(base.text, base.faction)
-            print(f"  🏰 {base.name} activates")
-            # Primary effects — skip one-shot types
             for effect in parsed.get_primary_effects():
-                if effect.get('type') not in self._BASE_EXCLUDED_EFFECTS:
-                    self._execute_effect(player, effect, game)
-            # Ally effects — skip one-shot types
+                queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
             ally_count = self._count_allies(player, base.faction, exclude_card=base)
             for effect in parsed.get_ally_effects(ally_count):
-                if effect.get('type') not in self._BASE_EXCLUDED_EFFECTS:
-                    self._execute_effect(player, effect, game)
+                queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+        if queued_effects:
+            game.base_activation = {'player_id': player.player_id, 'effects': queued_effects, 'index': 0}
+            self._advance_base_activation(player, game)
+
+    def _advance_base_activation(self, player, game):
+        """Run base effects in order, pausing safely for pending decisions."""
+        activation = game.base_activation
+        if not activation:
+            return game
+        effects = activation.get('effects', [])
+        while activation['index'] < len(effects) and not game.pending_effect:
+            entry = effects[activation['index']]
+            activation['index'] += 1
+            # A base destroyed before its queued activation no longer fires.
+            if not any(base.instance_id == entry['base_id'] for base in player.bases):
+                continue
+            print(f"  🏰 {entry['base_name']} activates")
+            self._execute_effect(player, entry['effect'], game)
+        if activation['index'] >= len(effects) and not game.pending_effect:
+            game.base_activation = None
+        return game
 
     def resolve_scrap(self, game_id: str, player_id: str, instance_id: str, location: str) -> 'GameState':
         """Resolve a pending scrap_card effect by scrapping a card from hand or discard."""
@@ -908,6 +1225,19 @@ class GameService:
 
         if not game.pending_effect or game.pending_effect.get('type') != 'scrap_card':
             raise ValueError("No pending scrap effect")
+
+        if game.pending_effect.get('batch_scrap'):
+            if instance_id not in game.pending_effect.get('eligible_instance_ids', []):
+                raise ValueError(f"Card {instance_id} is not eligible for this batch scrap")
+            batch = game.play_batch
+            if not batch or not batch.get('current_effect_key'):
+                raise ValueError("No active batch scrap opportunity")
+            batch['decisions'][batch.pop('current_effect_key')] = {
+                'instance_id': instance_id,
+                'location': location,
+            }
+            game.pending_effect = None
+            return self._advance_play_batch(game, player)
 
         allowed_location = game.pending_effect.get('location', 'hand')
         if location == 'trade_row' and allowed_location != 'trade_row':
@@ -954,7 +1284,13 @@ class GameService:
         scrapped_count = pe.get('scrapped_count', 0) + 1
         max_count = pe.get('max_count', 1)
 
-        if scrapped_count < max_count:
+        location = pe.get('location', 'hand')
+        has_more_targets = (
+            (location == 'trade_row' and bool(game.trade_row)) or
+            (location in ('hand', 'hand_or_discard') and bool(player.hand)) or
+            (location in ('discard', 'hand_or_discard') and bool(player.discard_pile))
+        )
+        if scrapped_count < max_count and has_more_targets:
             game.pending_effect = {**pe, 'scrapped_count': scrapped_count}
         else:
             game.pending_effect = None
@@ -969,6 +1305,16 @@ class GameService:
         if game.pending_effect is None:
             for bonus_effect in pe.get('on_resolve_effects', []):
                 self._execute_effect(player, bonus_effect, game)
+
+        # A card scrapped directly from the hand was never played, so its
+        # primary and ally abilities must not fire. It may still use its own
+        # explicitly printed Scrap ability (for example, Battle Blob's +4
+        # Combat). Apply it after completing the effect that selected the card
+        # so any new pending effect it creates is preserved.
+        if location == 'hand':
+            parsed_card = parse_card(card.text, card.faction)
+            for scrap_effect in parsed_card.get_scrap_effects():
+                self._execute_effect(player, scrap_effect, game=game)
 
         action = GameAction(
             action_id=str(uuid.uuid4()),
@@ -1001,6 +1347,11 @@ class GameService:
             target = player
         else:
             # The targeted opponent chooses which card to discard
+            expected_target_id = game.pending_effect.get('target_player_id')
+            if expected_target_id and target_player_id != expected_target_id:
+                raise ValueError("This discard choice belongs to another player")
+            if player_id != target_player_id:
+                raise ValueError("The targeted player must choose their own discard")
             target = game.get_player(target_player_id)
             if not target:
                 raise ValueError(f"Target player {target_player_id} not found")
@@ -1079,6 +1430,16 @@ class GameService:
         if not game.pending_effect:
             raise ValueError("No pending effect to skip")
 
+        if game.pending_effect.get('batch_scrap'):
+            if not game.pending_effect.get('optional', False):
+                raise ValueError("Cannot skip a mandatory effect")
+            batch = game.play_batch
+            if not batch or not batch.get('current_effect_key'):
+                raise ValueError("No active batch scrap opportunity")
+            batch['skipped'].append(batch.pop('current_effect_key'))
+            game.pending_effect = None
+            return self._advance_play_batch(game, player)
+
         if not game.pending_effect.get('optional', False):
             raise ValueError("Cannot skip a mandatory effect")
 
@@ -1153,9 +1514,9 @@ class GameService:
             raise ValueError(f"{card.name} costs {card.cost}, max allowed is {max_cost}")
 
         type_ok = (
-            card_type_filter == 'ship' and card.type != 'Base' or
-            card_type_filter == 'base' and card.type == 'Base' or
-            card_type_filter in ('ship or base', 'any')
+            card_type_filter in ('any', 'ship_or_base', 'ship or base') or
+            (card_type_filter == 'ship' and card.type != 'Base') or
+            (card_type_filter == 'base' and card.type == 'Base')
         )
         if not type_ok:
             raise ValueError(f"{card.name} is not a valid {card_type_filter}")
@@ -1272,6 +1633,16 @@ class GameService:
             raise ValueError(f"Player {player_id} not found")
         if not game.pending_effect or game.pending_effect.get('type') != 'copy_ship':
             raise ValueError("No pending copy_ship effect")
+
+        if game.pending_effect.get('batch_copy'):
+            if instance_id not in game.pending_effect.get('eligible_instance_ids', []):
+                raise ValueError(f"Ship {instance_id} is not eligible to copy")
+            batch = game.play_batch
+            if not batch or not batch.get('current_copy_source'):
+                raise ValueError("No active batch copy choice")
+            batch['copies'][batch.pop('current_copy_source')] = instance_id
+            game.pending_effect = None
+            return self._advance_play_batch(game, player)
 
         card = next((c for c in player.in_play if c.instance_id == instance_id), None)
         if not card:

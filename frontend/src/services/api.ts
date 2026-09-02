@@ -86,6 +86,19 @@ class ApiService {
     return response.json();
   }
 
+  async playHand(gameId: string, playerId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE}/games/${gameId}/play_hand`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to play hand');
+    }
+    return response.json();
+  }
+
   async acquireCard(
     gameId: string,
     playerId: string,

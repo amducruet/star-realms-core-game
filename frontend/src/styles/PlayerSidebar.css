@@ -17,7 +17,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  margin-AItom: 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 .sidebar-player {
@@ -41,7 +41,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-AItom: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .sidebar-player-name {
@@ -83,7 +83,7 @@
   background: rgba(255,255,255,0.1);
   border-radius: 2px;
   overflow: hidden;
-  margin-AItom: 0.4rem;
+  margin-bottom: 0.4rem;
 }
 
 .sidebar-authority-fill {

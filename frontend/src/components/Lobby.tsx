@@ -131,7 +131,7 @@ export function Lobby({ gameState, onGameCreated, onGameStarted }: LobbyProps) {
             <button className="help-close" onClick={() => setShowHelp(false)}>✕</button>
             <div className="help-content">
               <p><strong>Objective:</strong> Be the last one standing</p>
-              <p><strong>Each turn:</strong> All cards in your hand play automatically. Use the Trade and Combat they generate.</p>
+              <p><strong>Each turn:</strong> Use any printed Scrap abilities you want, then play the rest of your hand together.</p>
               <p><strong>Trade:</strong> Buy cards from the Trade Row to strengthen your deck.</p>
               <p><strong>Combat:</strong> Attack opponent bases and players. You must destroy all bases before hitting a player directly.</p>
               <p><strong>Bases &amp; Outposts:</strong> Bases stay in play and give bonuses every turn. Non-outpost bases must all be destroyed before you can attack a player directly. Outposts can be attacked in any order and do not block direct attacks.</p>
