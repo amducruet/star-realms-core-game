@@ -1,8 +1,7 @@
 """
 Simple AIopponent service.
 """
-import random
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from app.models.game import GameState
 from app.models.player import Player
 
@@ -59,18 +58,10 @@ class AIService:
         action_type = action.get("type")
 
         if action_type == "play_all_cards":
-            # Loop so draw effects mid-turn get played too
-            played = set()
-            while True:
-                current_player = game.get_player(ai_player.player_id)
-                unplayed = [c for c in current_player.hand if c.instance_id not in played]
-                if not unplayed:
-                    break
-                card = unplayed[0]
-                played.add(card.instance_id)
-                print(f"  🃏 Playing card: {card.name}")
-                game = game_service.play_card(game.game_id, ai_player.player_id, card.instance_id)
-                game = self._resolve_pending_effect(game, ai_player, game_service)
+            game = self.resolve_pending_effects(game, ai_player, game_service)
+            while game.get_player(ai_player.player_id).hand or game.play_batch or game.base_activation:
+                game = game_service.play_hand_batch(game.game_id, ai_player.player_id)
+                game = self.resolve_pending_effects(game, ai_player, game_service)
 
         elif action_type == "buy_cards":
             # Buy cards until no trade left
@@ -164,6 +155,20 @@ class AIService:
 
         return game
 
+    def resolve_pending_effects(self, game: GameState, ai_player: Player, game_service) -> GameState:
+        """Resolve a complete chain of Robot pending effects."""
+        for _ in range(50):
+            if not game.pending_effect:
+                return game
+            if game.pending_effect.get('type') == 'discard_card' and game.pending_effect.get('target') == 'opponent':
+                target = game.get_player(game.pending_effect.get('target_player_id', ''))
+                if target and not target.is_ai:
+                    # The targeted human—not the Robot—chooses the discarded
+                    # card. Leave the effect pending and pause the Robot turn.
+                    return game
+            game = self._resolve_pending_effect(game, ai_player, game_service)
+        raise ValueError("Robot pending-effect chain exceeded 50 resolutions")
+
     def _resolve_pending_effect(self, game: GameState, ai_player: Player, game_service) -> GameState:
         """Resolve any pending interactive effect for the Robot player."""
         if not game.pending_effect:
@@ -188,6 +193,11 @@ class AIService:
                     candidates += [(c, 'hand') for c in current_player.hand]
                 if location in ('discard', 'hand_or_discard'):
                     candidates += [(c, 'discard') for c in current_player.discard_pile]
+
+            eligible_ids = pe.get('eligible_instance_ids')
+            if eligible_ids is not None:
+                eligible_ids = set(eligible_ids)
+                candidates = [(card, loc) for card, loc in candidates if card.instance_id in eligible_ids]
 
             if not candidates:
                 if optional:
@@ -215,18 +225,24 @@ class AIService:
                 print(f"  🗑️ AIdiscards own card: {worst.name}")
                 return game_service.resolve_discard(game.game_id, ai_player.player_id, ai_player.player_id, worst.instance_id)
 
-            opponents = [p for p in game.players if p.player_id != ai_player.player_id]
-            target = next((p for p in opponents if p.hand), None)
+            target_id = pe.get('target_player_id')
+            target = game.get_player(target_id) if target_id else None
+            if not target:
+                opponents = [p for p in game.players if p.player_id != ai_player.player_id]
+                target = next((p for p in opponents if p.hand), None)
             if not target:
                 if optional:
                     return game_service.skip_effect(game.game_id, ai_player.player_id)
                 game.pending_effect = None
                 return game
 
-            # Discard the opponent's most expensive card
-            best = max(target.hand, key=lambda c: c.cost)
-            print(f"  🗑️ AIforcing {target.name} to discard {best.name}")
-            return game_service.resolve_discard(game.game_id, ai_player.player_id, target.player_id, best.instance_id)
+            if not target.is_ai:
+                return game
+
+            # An AI target chooses its own cheapest card to discard.
+            worst = min(target.hand, key=lambda c: c.cost)
+            print(f"  🗑️ {target.name} discards {worst.name}")
+            return game_service.resolve_discard(game.game_id, target.player_id, target.player_id, worst.instance_id)
 
         elif effect_type == 'choice':
             options = pe.get('options', [])
@@ -286,6 +302,9 @@ class AIService:
         elif effect_type == 'copy_ship':
             current_player = game.get_player(ai_player.player_id)
             ships = [c for c in current_player.in_play if c.type != 'Base' and c.name != 'Stealth Needle']
+            if pe.get('batch_copy'):
+                eligible = set(pe.get('eligible_instance_ids', []))
+                ships = [c for c in current_player.hand if c.instance_id in eligible]
             if ships:
                 best = max(ships, key=lambda c: c.cost)
                 print(f"  🔮 AIcopying ship: {best.name}")
@@ -306,6 +325,18 @@ class AIService:
             best = max(bases_in_discard, key=lambda c: c.cost)
             print(f"  📦 AImoving {best.name} to top of deck")
             return game_service.resolve_base_from_discard_to_top(game.game_id, ai_player.player_id, best.instance_id)
+
+        elif effect_type == 'destroy_base':
+            opponents = [p for p in game.players if p.player_id != ai_player.player_id and p.authority > 0]
+            bases = [(base, opponent) for opponent in opponents for base in opponent.bases]
+            if not bases:
+                game.pending_effect = None
+                return game
+            base, owner = max(bases, key=lambda item: (item[0].defense or 0, item[0].cost))
+            print(f"  💥 AIdestroying base: {base.name}")
+            return game_service.resolve_destroy_base(
+                game.game_id, ai_player.player_id, owner.player_id, base.instance_id
+            )
 
         else:
             # Unknown effect type — skip if optional, clear otherwise

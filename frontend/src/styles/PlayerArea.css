@@ -20,9 +20,9 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-AItom: 1rem;
-  padding-AItom: 1rem;
-  border-AItom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .player-name {
@@ -94,7 +94,7 @@
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-AItom: 0.75rem;
+  margin-bottom: 0.75rem;
   opacity: 0.8;
 }
 

@@ -10,27 +10,32 @@ interface TradeRowProps {
   isMyTurn: boolean;
   onAcquire: (card: CardInstance, fromExplorers?: boolean) => void;
   onScrapSelect?: (card: CardInstance) => void;
+  eligibleScrapIds?: string[];
 }
 
-export function TradeRow({ tradeRow, explorerPile, scrapHeap, currentPlayer, isMyTurn, onAcquire, onScrapSelect }: TradeRowProps) {
+export function TradeRow({ tradeRow, explorerPile, scrapHeap, currentPlayer, isMyTurn, onAcquire, onScrapSelect, eligibleScrapIds }: TradeRowProps) {
   const canAfford = (cost: number) => isMyTurn && !!currentPlayer && currentPlayer.trade >= cost;
+  const eligibleScrapSet = eligibleScrapIds ? new Set(eligibleScrapIds) : null;
 
   return (
     <div className="trade-row-zone">
       <div className="trade-row-section">
         <span className="trade-zone-label">
-          Trade Row {onScrapSelect && <span style={{ color: '#ef4444', fontSize: '0.75rem', marginLeft: '6px' }}>— Click a card to scrap it</span>}
+          Trade Row
         </span>
         <div className="trade-row-cards">
-          {tradeRow.map((card, i) => (
-            <Card
-              key={card.instance_id}
-              card={card}
-              onClick={onScrapSelect ? () => onScrapSelect(card) : () => onAcquire(card)}
-              clickable={onScrapSelect ? true : canAfford(card.cost)}
-              enterIndex={i}
-            />
-          ))}
+          {tradeRow.map((card, i) => {
+            const scrapEligible = !!onScrapSelect && (!eligibleScrapSet || eligibleScrapSet.has(card.instance_id));
+            return (
+              <Card
+                key={card.instance_id}
+                card={card}
+                onClick={scrapEligible ? () => onScrapSelect(card) : onScrapSelect ? undefined : () => onAcquire(card)}
+                clickable={onScrapSelect ? scrapEligible : canAfford(card.cost)}
+                enterIndex={i}
+              />
+            );
+          })}
         </div>
       </div>
 

@@ -63,7 +63,7 @@
 .space-nebula--2 {
   width: 500px;
   height: 350px;
-  AItom: 15%;
+  bottom: 15%;
   right: 15%;
   background: var(--space-nebula-2);
 }

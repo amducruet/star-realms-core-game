@@ -8,6 +8,8 @@
   border-radius: 12px;
   padding: 0.75rem 1.25rem;
   margin: 0 1rem;
+  min-width: 0;
+  max-width: calc(100% - 2rem);
 }
 
 .trade-row-section {
@@ -22,7 +24,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
-  margin-AItom: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .trade-row-cards {
@@ -30,12 +32,22 @@
   gap: 0.75rem;
   flex-wrap: nowrap;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   overflow-x: auto;
   overflow-y: visible;
   padding-bottom: 0.25rem;
   padding-top: 12px;
   flex: 1;
+}
+
+/* Scale the regular card presentation without switching to the condensed
+   typography/layout used by .card-compact. */
+.trade-row-cards .card {
+  width: clamp(170px, 14vw, 220px);
+}
+
+.trade-row-cards .card-art {
+  height: clamp(145px, 12vw, 195px);
 }
 
 .trade-row-cards::-webkit-scrollbar {
@@ -50,6 +62,7 @@
   display: flex;
   gap: 0.75rem;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .trade-pile {
@@ -87,4 +100,47 @@
   justify-content: center;
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+@media (min-width: 901px) and (max-width: 1400px) {
+  .trade-row-zone {
+    gap: 0.65rem;
+    padding-inline: 0.75rem;
+  }
+
+  .trade-row-aside {
+    gap: 0.5rem;
+  }
+
+  .trade-row-aside .card,
+  .trade-row-aside .pile-empty {
+    width: 170px;
+  }
+
+  .trade-row-aside .card-art {
+    height: 145px;
+  }
+}
+
+@media (min-width: 700px) and (max-width: 900px) {
+  .trade-row-zone {
+    flex-direction: column;
+    gap: 0.65rem;
+    margin: 0 0.5rem;
+    padding: 0.65rem;
+  }
+
+  .trade-row-section,
+  .trade-row-cards {
+    width: 100%;
+  }
+
+  .trade-row-cards {
+    justify-content: flex-start;
+  }
+
+  .trade-row-aside {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }

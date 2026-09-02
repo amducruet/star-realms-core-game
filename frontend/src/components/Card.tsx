@@ -8,7 +8,6 @@ interface CardProps {
   card: CardInstance;
   onClick?: () => void;
   clickable?: boolean;
-  count?: number;
   showScrapButton?: boolean;
   onScrap?: () => void;
   compact?: boolean;
@@ -61,7 +60,7 @@ function parseStats(text: string): ParsedStats {
   return { combat, trade, authority, remainder };
 }
 
-export function Card({ card, onClick, clickable = false, count, showScrapButton = false, onScrap, compact = false, small = false, enterIndex, played = false }: CardProps) {
+export function Card({ card, onClick, clickable = false, showScrapButton = false, onScrap, compact = false, small = false, enterIndex, played = false }: CardProps) {
   const factionColor = FACTION_COLORS[card.faction] || 'gray';
   const abilities = formatCardText(card.text);
   const canScrap = hasScrapAbility(card.text);
@@ -69,6 +68,10 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
 
   const primaryAbilities = abilities.filter(a => a.type === 'primary');
   const conditionalAbilities = abilities.filter(a => a.type !== 'primary');
+  const scrapText = abilities
+    .filter(a => a.type === 'scrap')
+    .map(a => a.text)
+    .join(' ');
 
   // Aggregate stats across all primary sections
   const stats = primaryAbilities.reduce(
@@ -173,9 +176,14 @@ export function Card({ card, onClick, clickable = false, count, showScrapButton 
       {showScrapButton && canScrap && onScrap && (
         <button
           className="btn-scrap"
+          aria-label={`Scrap ${card.name}: ${scrapText}`}
+          title={`Scrap: ${scrapText}`}
           onClick={(e) => { e.stopPropagation(); onScrap(); }}
         >
           <ScrapIcon size={12} /> Scrap
+          <span className="scrap-tooltip" role="tooltip">
+            <strong>Scrap:</strong> {scrapText}
+          </span>
         </button>
       )}
     </div>

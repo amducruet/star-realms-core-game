@@ -32,63 +32,34 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
   const [aiTrigger, setAiTrigger] = useState(0);
   const executingAiRef = useRef(false);
   const autoPlayingRef = useRef(false);
-  const prevPlayerIndexRef = useRef(-1);
 
   const currentPlayer = gameState.players.find((p) => p.player_id === currentPlayerId);
   const isMyTurn = gameState.players[gameState.current_player_index]?.player_id === currentPlayerId;
   const opponents = gameState.players.filter((p) => p.player_id !== currentPlayerId);
 
-  // Auto-play all hand cards at start of player's turn, and resume after pending effects clear
+  // Resume an existing strict batch after its pending choice clears. Starting
+  // a new human batch is explicit so printed Scrap abilities can be used first.
   const pendingEffectRef = useRef(gameState.pending_effect);
   useEffect(() => {
     const wasBlocked = !!pendingEffectRef.current;
     pendingEffectRef.current = gameState.pending_effect;
 
-    // Always track the latest player index so turn-change detection works across full cycles
-    const turnChanged = gameState.current_player_index !== prevPlayerIndexRef.current;
-    prevPlayerIndexRef.current = gameState.current_player_index;
-
     if (!isMyTurn || !currentPlayerId || !currentPlayer) return;
     if (gameState.pending_effect) return;
     if (autoPlayingRef.current) return;
-    if (currentPlayer.hand.length === 0) return;
-    // Only fire on turn start OR when a pending effect just cleared mid-hand
-    if (!wasBlocked && !turnChanged) return;
+    if ((!gameState.play_batch && !gameState.base_activation) || !wasBlocked) return;
 
     const playAll = async () => {
       autoPlayingRef.current = true;
-      let state = gameState;
 
-      // Play cards one at a time until hand is empty or a pending effect arises.
-      // Uses a while loop so newly drawn cards (from ally effects etc.) are also played.
-      while (true) {
-        const player = state.players.find(p => p.player_id === currentPlayerId);
-        if (!player || player.hand.length === 0 || state.pending_effect) break;
-        const card = player.hand[0];
-        try {
-          const response = await api.playCard(state.game_id, currentPlayerId, card.instance_id);
-          if (response.game) {
-            state = response.game;
-            onGameUpdate(response.game);
-          } else {
-            break;
-          }
-        } catch {
-          break;
+      try {
+        const response = await api.playHand(gameState.game_id, currentPlayerId);
+        if (response.game) {
+          onGameUpdate(response.game);
         }
-      }
-
-      // Auto-end turn when nothing remains to do
-      if (!state.pending_effect) {
-        const player = state.players.find(p => p.player_id === currentPlayerId);
-        if (player && player.hand.length === 0 && player.trade === 0 && player.combat === 0) {
-          try {
-            const response = await api.endTurn(state.game_id, currentPlayerId);
-            if (response.game) onGameUpdate(response.game);
-          } catch {
-            // ignore — player can end turn manually
-          }
-        }
+      } catch {
+        autoPlayingRef.current = false;
+        return;
       }
 
       autoPlayingRef.current = false;
@@ -96,6 +67,17 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
 
     playAll();
   }, [isMyTurn, gameState.current_player_index, gameState.game_id, gameState.pending_effect]);
+
+  const handlePlayHand = async () => {
+    if (!currentPlayerId || !isMyTurn || gameState.pending_effect || gameState.play_batch || gameState.base_activation) return;
+    try {
+      const response = await api.playHand(gameState.game_id, currentPlayerId);
+      if (response.game) onGameUpdate(response.game);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to play hand');
+    }
+  };
 
   // Auto-execute AIturns
   useEffect(() => {
@@ -309,7 +291,14 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     if (!currentPlayerId) return;
     try {
       const response = await api.resolveDiscard(gameState.game_id, currentPlayerId, targetPlayerId, card.instance_id);
-      if (response.game) onGameUpdate(response.game);
+      if (response.game) {
+        onGameUpdate(response.game);
+        const activePlayer = response.game.players[response.game.current_player_index];
+        if (activePlayer?.is_ai && !response.game.pending_effect) {
+          const continued = await api.executeAiTurn(response.game.game_id);
+          if (continued.game) onGameUpdate(continued.game);
+        }
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve discard');
@@ -432,6 +421,12 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     );
   }
 
+  const tradeRowScrapEffect = isMyTurn
+    && gameState.pending_effect?.type === 'scrap_card'
+    && gameState.pending_effect?.location === 'trade_row'
+    ? gameState.pending_effect
+    : null;
+
   return (
     <div className="game-board">
       <YourTurnToast isMyTurn={isMyTurn} />
@@ -444,11 +439,22 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
       )}
 
       {aiExecuting && (
-        <div className="ai-turn-banner">🤖 AIis thinking...</div>
+        <div className="ai-turn-banner">🤖 Robot is thinking...</div>
       )}
 
       {/* TOP — Trade Row */}
       <div className="game-zone-top">
+        {tradeRowScrapEffect && (
+          <div className="trade-row-scrap-prompt" role="status">
+            <div>
+              <strong>Pick a card to scrap in the Trade Row</strong>
+              <span>Select the card directly from the row below.</span>
+            </div>
+            {tradeRowScrapEffect.optional && (
+              <button type="button" onClick={handleSkipEffect}>Skip</button>
+            )}
+          </div>
+        )}
         <TradeRow
           tradeRow={gameState.trade_row}
           explorerPile={gameState.explorer_pile}
@@ -457,14 +463,15 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           isMyTurn={isMyTurn}
           onAcquire={handleAcquireCard}
           onScrapSelect={
-            isMyTurn && gameState.pending_effect?.type === 'scrap_card' && gameState.pending_effect?.location === 'trade_row'
+            tradeRowScrapEffect
               ? (card) => handleResolveScrap(card, 'trade_row')
               : undefined
           }
+          eligibleScrapIds={tradeRowScrapEffect?.eligible_instance_ids}
         />
       </div>
 
-      {/* CENTER — flex column: opponents | AItom-row(sidebar | mine | log) */}
+      {/* CENTER — flex column: opponents | bottom row (sidebar | mine | log) */}
       <div className="game-zone-center">
         {/* Opponents */}
         <CombatZone
@@ -481,8 +488,8 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           onDistributeDamage={() => setShowDamageDistributor(true)}
         />
 
-        {/* AItom row: sidebar | mine | log */}
-        <div className="game-AItom-row">
+        {/* Bottom row: sidebar | mine | log */}
+        <div className="game-bottom-row">
           <div className="game-zone-left">
             <PlayerSidebar
               players={gameState.players}
@@ -497,6 +504,8 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
             opponents={opponents.length > 0 ? opponents : gameState.players.slice(1)}
             maxAuthority={gameState.config.starting_authority}
             onScrapCard={handleScrapCard}
+            onPlayHand={handlePlayHand}
+            canPlayHand={isMyTurn && !gameState.pending_effect && !gameState.play_batch && !gameState.base_activation}
             onEndTurn={handleEndTurn}
             onDistributeDamage={() => setShowDamageDistributor(true)}
             launching={launchingFleet}
@@ -518,7 +527,7 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
       )}
 
       {/* Pending Effect Modal — opponent choosing their own discard */}
-      {gameState.pending_effect?.type === 'discard_card' && gameState.pending_effect?.target === 'opponent' && !isMyTurn && currentPlayer && currentPlayerId && (() => {
+      {gameState.pending_effect?.type === 'discard_card' && gameState.pending_effect?.target === 'opponent' && !isMyTurn && currentPlayer && currentPlayerId && (!gameState.pending_effect.target_player_id || gameState.pending_effect.target_player_id === currentPlayerId) && (() => {
         if (currentPlayer.hand.length === 0) return null;
         return (
           <CardPicker
@@ -553,10 +562,16 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
             getLocation = (card) =>
               currentPlayer.hand.some(c => c.instance_id === card.instance_id) ? 'hand' : 'discard';
           }
+          if (pe.eligible_instance_ids) {
+            const eligible = new Set(pe.eligible_instance_ids);
+            cards = cards.filter(card => eligible.has(card.instance_id));
+          }
           return (
             <CardPicker
               title="Scrap a Card"
-              subtitle={`Choose a card from your ${loc.replace('_', ' ')} to scrap`}
+              subtitle={pe.batch_scrap && pe.source_name
+                ? `${pe.source_name}: choose a card from your ${loc.replace('_', ' ')} to scrap`
+                : `Choose a card from your ${loc.replace('_', ' ')} to scrap`}
               cards={cards}
               onSelect={(card) => handleResolveScrap(card, getLocation(card))}
               onSkip={pe.optional ? handleSkipEffect : undefined}
@@ -656,7 +671,11 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           );
         }
         if (pe.type === 'copy_ship') {
-          const copiableShips = currentPlayer.in_play.filter(c => c.type !== 'Base' && c.name !== 'Stealth Needle');
+          const eligible = pe.eligible_instance_ids ? new Set(pe.eligible_instance_ids) : null;
+          const sourceCards = pe.batch_copy ? currentPlayer.hand : currentPlayer.in_play;
+          const copiableShips = sourceCards.filter(c =>
+            c.type !== 'Base' && c.name !== 'Stealth Needle' && (!eligible || eligible.has(c.instance_id))
+          );
           return (
             <CardPicker
               title="Copy a Ship"

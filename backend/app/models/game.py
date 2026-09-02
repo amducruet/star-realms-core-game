@@ -62,6 +62,9 @@ class GameState(BaseModel):
 
     # Pending interactive effect waiting for player resolution
     pending_effect: Optional[dict] = None
+    # Transient state for two-phase, order-independent hand play.
+    play_batch: Optional[dict] = None
+    base_activation: Optional[dict] = None
 
     # Winner
     winner_id: Optional[str] = None

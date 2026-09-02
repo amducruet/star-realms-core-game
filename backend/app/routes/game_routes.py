@@ -167,15 +167,22 @@ def _auto_resolve_opponent_discard(game):
     pe = game.pending_effect
     if not pe or pe.get('type') != 'discard_card' or pe.get('target') != 'opponent':
         return game
-    current_player = game.current_player
-    opponents = [p for p in game.players if p.player_id != current_player.player_id and p.is_ai]
-    target = next((p for p in opponents if p.hand), None)
+    target_id = pe.get('target_player_id')
+    target = game.get_player(target_id) if target_id else None
     if not target:
+        current_player = game.current_player
+        target = next(
+            (p for p in game.players if p.player_id != current_player.player_id and p.is_ai and p.hand),
+            None,
+        )
+    if not target or not target.is_ai:
+        return game
+    if not target.hand:
         game.pending_effect = None
         return game
     worst = min(target.hand, key=lambda c: c.cost)
     print(f"  🤖 Auto-resolving opponent discard: {target.name} discards {worst.name}")
-    return game_service.resolve_discard(game.game_id, current_player.player_id, target.player_id, worst.instance_id)
+    return game_service.resolve_discard(game.game_id, target.player_id, target.player_id, worst.instance_id)
 
 
 @router.post("/games/{game_id}/play_card")
@@ -188,6 +195,25 @@ async def play_card(game_id: str, request: PlayCardRequest):
             "type": "card_played",
             "game": game.model_dump()
         })
+        return {"status": "success", "game": game.model_dump()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/play_hand")
+async def play_hand(game_id: str, request: GameActionRequest):
+    """Play or resume the current hand as a strict batch."""
+    try:
+        game = game_service.play_hand_batch(game_id, request.player_id)
+        game = _auto_resolve_opponent_discard(game)
+        # An AI opponent's discard is resolved inside this request, so the
+        # client never observes a pending-effect transition that would resume
+        # the batch. Continue it here until it completes or needs a real
+        # player decision.
+        while game.play_batch and not game.pending_effect:
+            game = game_service.play_hand_batch(game_id, request.player_id)
+            game = _auto_resolve_opponent_discard(game)
+        await manager.broadcast(game_id, {"type": "hand_batch_updated", "game": game.model_dump()})
         return {"status": "success", "game": game.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -315,17 +341,16 @@ async def execute_ai_turn(game_id: str):
             action_type = action.get("type")
 
             if action_type == "play_all_cards":
-                played = set()
-                while True:
-                    cp = game.get_player(current_player.player_id)
-                    unplayed = [c for c in cp.hand if c.instance_id not in played]
-                    if not unplayed:
-                        break
-                    card = unplayed[0]
-                    played.add(card.instance_id)
-                    game = game_service.play_card(game.game_id, current_player.player_id, card.instance_id)
-                    game = ai_service_instance._resolve_pending_effect(game, current_player, game_service)
+                game = ai_service_instance.resolve_pending_effects(game, current_player, game_service)
+                if game.pending_effect:
+                    await manager.broadcast(game_id, {"type": "effect_pending", "game": game.model_dump()})
+                    return {"status": "success", "game": game.model_dump()}
+                while game.get_player(current_player.player_id).hand or game.play_batch or game.base_activation:
+                    game = game_service.play_hand_batch(game.game_id, current_player.player_id)
+                    game = ai_service_instance.resolve_pending_effects(game, current_player, game_service)
                     await manager.broadcast(game_id, {"type": "ai_card_played", "game": game.model_dump()})
+                    if game.pending_effect:
+                        return {"status": "success", "game": game.model_dump()}
                     await asyncio.sleep(0.45)
 
             elif action_type == "buy_cards":
@@ -348,24 +373,30 @@ async def execute_ai_turn(game_id: str):
                 opponents = [p for p in game.players if p.player_id != current_player.player_id and p.authority > 0]
                 if opponents and cp.combat > 0:
                     target = min(opponents, key=lambda p: p.authority)
-                    outposts = [b for b in target.bases if b.is_outpost]
-                    for outpost in outposts:
+                    # Non-outpost bases protect the player from direct damage.
+                    # Attack any that can be destroyed before considering the
+                    # player as a target. Outposts do not block direct attacks
+                    # under the rules enforced by GameService.
+                    blocking_bases = [b for b in target.bases if not b.is_outpost]
+                    for base in blocking_bases:
                         cp = game.get_player(current_player.player_id)
-                        if cp.combat >= outpost.current_defense:
+                        if cp.combat >= base.current_defense:
                             await manager.broadcast(game_id, {
                                 "type": "combat_attack",
                                 "attacker_id": current_player.player_id,
                                 "target_id": target.player_id,
-                                "base_id": outpost.instance_id,
-                                "damage": outpost.current_defense,
+                                "base_id": base.instance_id,
+                                "damage": base.current_defense,
                                 "game": game.model_dump()
                             })
                             await asyncio.sleep(1.2)
-                            game = game_service.attack_base(game.game_id, current_player.player_id, target.player_id, outpost.instance_id, outpost.current_defense)
+                            game = game_service.attack_base(game.game_id, current_player.player_id, target.player_id, base.instance_id, base.current_defense)
                             await manager.broadcast(game_id, {"type": "base_attacked", "game": game.model_dump()})
                             await asyncio.sleep(0.6)
                     cp = game.get_player(current_player.player_id)
-                    if cp.combat > 0:
+                    refreshed_target = game.get_player(target.player_id)
+                    remaining_blocking_bases = [b for b in refreshed_target.bases if not b.is_outpost]
+                    if cp.combat > 0 and not remaining_blocking_bases:
                         await manager.broadcast(game_id, {
                             "type": "combat_attack",
                             "attacker_id": current_player.player_id,

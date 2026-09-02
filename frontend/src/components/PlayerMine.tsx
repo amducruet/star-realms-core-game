@@ -10,12 +10,14 @@ interface PlayerMineProps {
   opponents: Player[];
   maxAuthority: number;
   onScrapCard: (card: CardInstance) => void;
+  onPlayHand: () => void;
+  canPlayHand: boolean;
   onEndTurn: () => void;
   onDistributeDamage: () => void;
   launching?: boolean;
 }
 
-export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, onScrapCard, onEndTurn, onDistributeDamage, launching = false }: PlayerMineProps) {
+export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, onScrapCard, onPlayHand, canPlayHand, onEndTurn, onDistributeDamage, launching = false }: PlayerMineProps) {
   return (
     <div className="combat-mine-section" data-mine={currentPlayer.player_id}>
       <AuthorityBar player={currentPlayer} maxAuthority={maxAuthority} />
@@ -40,25 +42,45 @@ export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, o
         <div className="combat-cards-center" data-inplay={currentPlayer.player_id}>
           {currentPlayer.bases.length > 0 && (
             <div className="combat-section">
-              <span className="combat-section-label">Bases</span>
+              <span className="combat-section-label">
+                Bases — {currentPlayer.bases_settled_this_turn ? 'Cashed in' : 'Ready'}
+              </span>
               <div className="combat-cards">
                 {currentPlayer.bases.map(base => (
-                  <Card key={base.instance_id} card={base} small showScrapButton={isMyTurn} onScrap={() => onScrapCard(base)} />
+                  <Card key={base.instance_id} card={base} small played={!!currentPlayer.bases_settled_this_turn} showScrapButton={isMyTurn && !currentPlayer.bases_settled_this_turn} onScrap={() => onScrapCard(base)} />
                 ))}
               </div>
             </div>
           )}
-          <div className={`combat-cards${launching ? ' fleet-launching' : ''}`} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-            {[...currentPlayer.in_play, ...currentPlayer.hand].map((card, i) => (
-              <Card key={card.instance_id} card={card} small showScrapButton={isMyTurn} onScrap={() => onScrapCard(card)} enterIndex={i} />
-            ))}
-          </div>
+          {currentPlayer.in_play.length > 0 && (
+            <div className="combat-section combat-section--in-play">
+              <span className="combat-section-label">In Play — Cashed in</span>
+              <div className={`combat-cards${launching ? ' fleet-launching' : ''}`}>
+                {currentPlayer.in_play.map((card, i) => (
+                  <Card key={card.instance_id} card={card} small played enterIndex={i} />
+                ))}
+              </div>
+            </div>
+          )}
+          {currentPlayer.hand.length > 0 && (
+            <div className="combat-section combat-section--hand">
+              <span className="combat-section-label">Hand — Not played</span>
+              <div className="combat-cards">
+                {currentPlayer.hand.map((card, i) => (
+                  <Card key={card.instance_id} card={card} small showScrapButton={isMyTurn && canPlayHand} onScrap={() => onScrapCard(card)} enterIndex={i} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Discard pile + actions */}
         <div className="player-pile">
           {isMyTurn && (
             <div className="pile-actions">
+              {(currentPlayer.hand.length > 0 || (currentPlayer.bases.length > 0 && !currentPlayer.bases_settled_this_turn)) && (
+                <button className="btn-play-hand" onClick={onPlayHand} disabled={!canPlayHand}>Play Hand</button>
+              )}
               <button className="btn-end-turn" onClick={onEndTurn}>End Turn</button>
               {opponents.length > 1 && currentPlayer.combat > 0 && (
                 <button className="btn-distribute-damage" onClick={onDistributeDamage}>
