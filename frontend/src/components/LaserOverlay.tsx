@@ -31,60 +31,65 @@ export function LaserOverlay({ attacks }: LaserOverlayProps) {
   const processedIds = useRef(new Set<string>());
 
   useEffect(() => {
-    const newBeams: Beam[] = [];
+    const pending = attacks.filter(a => !processedIds.current.has(a.id));
+    if (pending.length === 0) return;
+    pending.forEach(a => processedIds.current.add(a.id));
 
-    for (const attack of attacks) {
-      if (processedIds.current.has(attack.id)) continue;
-      processedIds.current.add(attack.id);
+    // Defer position queries until after the paint so DOM has settled
+    const raf = requestAnimationFrame(() => {
+      const newBeams: Beam[] = [];
 
-      const sourceEl =
-        document.querySelector<Element>(`[data-fleet="${attack.attackerId}"]`) ??
-        document.querySelector<Element>(`[data-inplay="${attack.attackerId}"]`) ??
-        document.querySelector<Element>('.combat-opponents-section');
-      // Target is either an opponent panel or the human player's mine section
-      const targetEl =
-        document.querySelector<Element>(`[data-mine="${attack.targetId}"]`) ??
-        document.querySelector<Element>(`[data-opponent="${attack.targetId}"]`) ??
-        document.querySelector<Element>('.combat-mine-section');
+      for (const attack of pending) {
+        const sourceEl =
+          document.querySelector<Element>(`[data-fleet="${attack.attackerId}"]`) ??
+          document.querySelector<Element>(`[data-inplay="${attack.attackerId}"]`) ??
+          document.querySelector<Element>(`[data-opponent="${attack.attackerId}"]`);
+        const targetEl =
+          document.querySelector<Element>(`[data-mine="${attack.targetId}"]`) ??
+          document.querySelector<Element>(`[data-opponent="${attack.targetId}"]`);
 
-      if (!sourceEl || !targetEl) continue;
+        if (!sourceEl || !targetEl) continue;
 
-      const src = getCenter(sourceEl);
-      const tgt = getCenter(targetEl);
-      const dx = tgt.x - src.x;
-      const dy = tgt.y - src.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
+        const src = getCenter(sourceEl);
+        const tgt = getCenter(targetEl);
+        const dx = tgt.x - src.x;
+        const dy = tgt.y - src.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length < 10) continue; // source and target are the same element
 
-      const configs = [
-        { jitterSrc: -20, jitterTgt: -10, color: 'orange', width: 4,  delay: 0 },
-        { jitterSrc: 0,   jitterTgt: 0,   color: 'red',    width: 8,  delay: 0.04 },
-        { jitterSrc: 20,  jitterTgt: 10,  color: 'white',  width: 2,  delay: 0.08 },
-      ];
+        const configs = [
+          { jitterSrc: -20, jitterTgt: -10, color: 'orange', width: 4,  delay: 0 },
+          { jitterSrc: 0,   jitterTgt: 0,   color: 'red',    width: 8,  delay: 0.04 },
+          { jitterSrc: 20,  jitterTgt: 10,  color: 'white',  width: 2,  delay: 0.08 },
+        ];
 
-      configs.forEach((cfg, i) => {
-        newBeams.push({
-          id: `${attack.id}-${i}`,
-          x1: src.x + cfg.jitterSrc,
-          y1: src.y,
-          x2: tgt.x + cfg.jitterTgt,
-          y2: tgt.y,
-          length,
-          color: cfg.color,
-          strokeWidth: cfg.width,
-          impactDelay: 0.36 + cfg.delay,
+        configs.forEach((cfg, i) => {
+          newBeams.push({
+            id: `${attack.id}-${i}`,
+            x1: src.x + cfg.jitterSrc,
+            y1: src.y,
+            x2: tgt.x + cfg.jitterTgt,
+            y2: tgt.y,
+            length,
+            color: cfg.color,
+            strokeWidth: cfg.width,
+            impactDelay: 0.36 + cfg.delay,
+          });
         });
-      });
-    }
+      }
 
-    if (newBeams.length > 0) {
-      setBeams(prev => [...prev, ...newBeams]);
-      setTimeout(() => {
-        setBeams(prev => {
-          const ids = new Set(newBeams.map(b => b.id));
-          return prev.filter(b => !ids.has(b.id));
-        });
-      }, 1800);
-    }
+      if (newBeams.length > 0) {
+        setBeams(prev => [...prev, ...newBeams]);
+        setTimeout(() => {
+          setBeams(prev => {
+            const ids = new Set(newBeams.map(b => b.id));
+            return prev.filter(b => !ids.has(b.id));
+          });
+        }, 1800);
+      }
+    }); // end requestAnimationFrame
+
+    return () => cancelAnimationFrame(raf);
   }, [attacks]);
 
   if (beams.length === 0) return null;

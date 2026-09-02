@@ -64,7 +64,7 @@ export function PlayerArea({
       {/* Bases */}
       {player.bases.length > 0 && (
         <div className="player-bases">
-          <h4>Bases: {isOpponent && player.bases.some(b => b.is_outpost) && <span className="outpost-warning">⚠️ Outposts must be destroyed first!</span>}</h4>
+          <h4>Bases: {isOpponent && player.bases.some(b => !b.is_outpost) && <span className="outpost-warning">⚠️ Destroy bases first!</span>}</h4>
           <div className="card-list-small">
             {player.bases.map((base) => (
               <Card

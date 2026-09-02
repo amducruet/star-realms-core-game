@@ -68,6 +68,8 @@
 .trade-pile {
   display: flex;
   flex-direction: column;
+  overflow: visible;
+  padding-top: 12px;
 }
 
 .scrap-pile-wrap {
