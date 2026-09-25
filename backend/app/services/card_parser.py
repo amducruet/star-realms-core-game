@@ -26,6 +26,7 @@ class EffectType(str, Enum):
     DRAW_PER_FACTION_PLAYED = "draw_per_faction_played"    # × faction_played_count[faction]
     DISCARD_ANY_NUMBER = "discard_any_number"              # discard N cards, gain per each
     COPY_SHIP = "copy_ship"                                # copy another ship played this turn
+    RETURN_SCRAPPED_CARD = "return_scrapped_card"          # return this card from the scrap heap at end of turn
 
 
 class ParsedAbility:
@@ -178,6 +179,17 @@ class ParsedAbility:
             m = match.lower()
             amount = word_to_num.get(m, int(m) if m.isdigit() else 1)
             self.effects.append({'type': EffectType.DRAW_CARDS, 'amount': amount})
+
+        # "At end of turn, move [this card] from the scrap heap to your discard pile"
+        return_scrapped_card = re.search(
+            r'at end of turn,?\s*move\s+(.+?)\s+from the scrap heap to your discard pile',
+            text, re.IGNORECASE
+        )
+        if return_scrapped_card:
+            self.effects.append({
+                'type': EffectType.RETURN_SCRAPPED_CARD,
+                'card_name': return_scrapped_card.group(1).strip(),
+            })
 
         # Extract self-discard effects ("then discard a card", "discard a card")
         # Distinct from opponent-discard — targets self
@@ -338,6 +350,9 @@ class ParsedCard:
             elif '{double' in section.lower() and 'ally}' in section.lower():
                 match = re.search(r'\{Double\s+[^}]+\s+Ally\}:?\s*(.*)', section, re.IGNORECASE | re.DOTALL)
                 if match:
+                    primary_text = section[:match.start()].strip()
+                    if primary_text and not self.primary_ability:
+                        self.primary_ability = ParsedAbility(primary_text)
                     ability_text = match.group(1).strip()
                     self.double_ally_ability = ParsedAbility(ability_text)
 
@@ -345,6 +360,9 @@ class ParsedCard:
             elif 'ally}' in section.lower():
                 match = re.search(r'\{[^}]+\s+Ally\}:?\s*(.*)', section, re.IGNORECASE | re.DOTALL)
                 if match:
+                    primary_text = section[:match.start()].strip()
+                    if primary_text and not self.primary_ability:
+                        self.primary_ability = ParsedAbility(primary_text)
                     ability_text = match.group(1).strip()
                     self.ally_ability = ParsedAbility(ability_text)
 

@@ -148,7 +148,7 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
 
           // Check if next player is also AIand trigger their turn
           const nextPlayer = response.game.players[response.game.current_player_index];
-          if (nextPlayer?.is_ai&& response.game.phase === 'playing') {
+          if (nextPlayer?.is_ai && response.game.phase === 'playing' && !response.game.pending_effect) {
             console.log(`🔗 [${playerName}] Next player ${nextPlayer.name} is also AI- forcing re-trigger`);
             // Force useEffect to run again by incrementing trigger
             setTimeout(() => {
@@ -302,6 +302,17 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve discard');
+    }
+  };
+
+  const handleSelectDiscardTarget = async (targetPlayerId: string) => {
+    if (!currentPlayerId) return;
+    try {
+      const response = await api.selectDiscardTarget(gameState.game_id, currentPlayerId, targetPlayerId);
+      if (response.game) onGameUpdate(response.game);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to select discard target');
     }
   };
 
@@ -590,6 +601,24 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
                 onSkip={pe.optional ? handleSkipEffect : undefined}
                 isOptional={pe.optional}
               />
+            );
+          }
+          if (!pe.target_player_id) {
+            const eligibleOpponents = opponents.filter(opponent => opponent.authority > 0 && opponent.hand.length > 0);
+            return (
+              <div className="modal-overlay">
+                <div className="card-picker" style={{ textAlign: 'center' }}>
+                  <h2>Choose an Opponent</h2>
+                  <p className="card-picker-subtitle">Select which opponent must discard a card.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+                    {eligibleOpponents.map(opponent => (
+                      <button key={opponent.player_id} className="btn-primary" onClick={() => handleSelectDiscardTarget(opponent.player_id)}>
+                        {opponent.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             );
           }
           // opponent discard: show a waiting message to the current player

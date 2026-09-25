@@ -65,6 +65,10 @@ class ResolveDiscardRequest(GameActionRequest):
     target_player_id: str
 
 
+class SelectDiscardTargetRequest(GameActionRequest):
+    target_player_id: str
+
+
 class ResolveChoiceRequest(GameActionRequest):
     option_index: int
 
@@ -169,12 +173,6 @@ def _auto_resolve_opponent_discard(game):
         return game
     target_id = pe.get('target_player_id')
     target = game.get_player(target_id) if target_id else None
-    if not target:
-        current_player = game.current_player
-        target = next(
-            (p for p in game.players if p.player_id != current_player.player_id and p.is_ai and p.hand),
-            None,
-        )
     if not target or not target.is_ai:
         return game
     if not target.hand:
@@ -300,6 +298,7 @@ async def scrap_card(game_id: str, request: ScrapCardRequest):
     """Scrap a card from play to activate its scrap ability."""
     try:
         game = game_service.scrap_card(game_id, request.player_id, request.instance_id)
+        game = _auto_resolve_opponent_discard(game)
         await manager.broadcast(game_id, {
             "type": "card_scrapped",
             "game": game.model_dump()
@@ -427,6 +426,7 @@ async def resolve_scrap(game_id: str, request: ResolveScrapRequest):
     """Resolve a pending scrap effect by choosing a card from hand or discard."""
     try:
         game = game_service.resolve_scrap(game_id, request.player_id, request.instance_id, request.location)
+        game = _auto_resolve_opponent_discard(game)
         await manager.broadcast(game_id, {
             "type": "effect_resolved",
             "game": game.model_dump()
@@ -441,10 +441,26 @@ async def resolve_discard(game_id: str, request: ResolveDiscardRequest):
     """Resolve a pending discard effect by choosing a card from the target's hand."""
     try:
         game = game_service.resolve_discard(game_id, request.player_id, request.target_player_id, request.instance_id)
+        current_player = game.current_player
+        if current_player and current_player.is_ai and game.pending_effect:
+            game = ai_service_instance.resolve_pending_effects(game, current_player, game_service)
+        game = _auto_resolve_opponent_discard(game)
         await manager.broadcast(game_id, {
             "type": "effect_resolved",
             "game": game.model_dump()
         })
+        return {"status": "success", "game": game.model_dump()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/select_discard_target")
+async def select_discard_target(game_id: str, request: SelectDiscardTargetRequest):
+    """Choose which opponent must discard, then auto-resolve if that opponent is AI."""
+    try:
+        game = game_service.select_discard_target(game_id, request.player_id, request.target_player_id)
+        game = _auto_resolve_opponent_discard(game)
+        await manager.broadcast(game_id, {"type": "discard_target_selected", "game": game.model_dump()})
         return {"status": "success", "game": game.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -468,6 +484,7 @@ async def resolve_choice(game_id: str, request: ResolveChoiceRequest):
     """Resolve a pending OR choice effect."""
     try:
         game = game_service.resolve_choice(game_id, request.player_id, request.option_index)
+        game = _auto_resolve_opponent_discard(game)
         await manager.broadcast(game_id, {"type": "choice_resolved", "game": game.model_dump()})
         return {"status": "success", "game": game.model_dump()}
     except Exception as e:

@@ -353,6 +353,9 @@ class GameService:
                 card = self._remove_scrap_target(player, game, decision['instance_id'], decision['location'])
                 game.scrap_heap.append(card)
                 player.scrapped_this_turn += 1
+                scrap_effect = active[key][1]
+                if scrap_effect.get('gain_cost_as_combat'):
+                    player.combat += card.cost
                 if decision['location'] == 'hand':
                     parsed = parse_card(card.text, card.faction)
                     for scrap_effect in parsed.get_scrap_effects():
@@ -575,6 +578,9 @@ class GameService:
 
     def _execute_effect(self, player: Player, effect: Dict[str, Any], game=None):
         """Execute a single card effect."""
+        if game is not None and game.pending_effect:
+            game.queued_effects.append({'player_id': player.player_id, 'effect': effect})
+            return
         effect_type = effect.get('type')
 
         if effect_type == EffectType.GAIN_COMBAT:
@@ -596,6 +602,13 @@ class GameService:
             amount = effect.get('amount', 0)
             self._draw_cards(player, amount)
             print(f"  → Drew {amount} card(s)")
+
+        elif effect_type == EffectType.RETURN_SCRAPPED_CARD and game is not None:
+            game.end_of_turn_effects.append({
+                'player_id': player.player_id,
+                'instance_id': effect.get('source_instance_id'),
+                'card_name': effect.get('card_name'),
+            })
 
         elif effect_type == EffectType.NEXT_ACQUIRE_TO_TOP:
             player.next_acquire_to_top = True
@@ -620,6 +633,7 @@ class GameService:
             )
             if not eligible and not explorer_eligible:
                 return
+
             game.pending_effect = {
                 'type': 'acquire_free_to_top',
                 'card_type': card_type,
@@ -693,10 +707,8 @@ class GameService:
                     if candidate.player_id != player.player_id and candidate.authority > 0 and candidate.hand
                 ]
                 has_target = bool(targets)
-                # Star Realms is normally two-player. Keeping the selected
-                # target on the pending effect also prevents another client
-                # from answering this player's discard choice.
-                target_player_id = targets[0].player_id if targets else None
+                # Let the attacker choose which opponent receives the discard.
+                target_player_id = None
             if not has_target:
                 return
             game.pending_effect = {
@@ -1078,6 +1090,8 @@ class GameService:
         scrap_effects = parsed_card.get_scrap_effects()
         print(f"  🗑️ Scrapping {card.name}")
         for effect in scrap_effects:
+            if effect.get('type') == EffectType.RETURN_SCRAPPED_CARD:
+                effect = {**effect, 'source_instance_id': card.instance_id}
             self._execute_effect(player, effect, game=game)
 
         # Log action
@@ -1121,6 +1135,18 @@ class GameService:
             raise ValueError("Must finish playing the current hand batch")
         if game.base_activation:
             raise ValueError("Must finish activating your bases")
+
+        # Resolve delayed effects while this player is still the active player.
+        due_effects = [e for e in game.end_of_turn_effects if e.get('player_id') == player_id]
+        game.end_of_turn_effects = [e for e in game.end_of_turn_effects if e.get('player_id') != player_id]
+        for effect in due_effects:
+            card = next(
+                (c for c in game.scrap_heap if c.instance_id == effect.get('instance_id')),
+                None,
+            )
+            if card is not None:
+                game.scrap_heap.remove(card)
+                player.discard_pile.append(card)
 
         # Discard hand and played cards
         for card in list(player.hand) + list(player.in_play) + list(player.bases):
@@ -1326,6 +1352,32 @@ class GameService:
         game.action_log.append(action)
         return game
 
+    def select_discard_target(self, game_id: str, player_id: str, target_player_id: str) -> GameState:
+        """Choose which opponent must discard for the current pending effect."""
+        game = self.games.get(game_id)
+        if not game:
+            raise ValueError(f"Game {game_id} not found")
+        if not game.pending_effect or game.pending_effect.get('type') != 'discard_card':
+            raise ValueError("No pending discard effect")
+        if game.pending_effect.get('target') != 'opponent':
+            raise ValueError("This discard effect does not target an opponent")
+        if not game.current_player or game.current_player.player_id != player_id:
+            raise ValueError("Only the current player can choose the discard target")
+        target = game.get_player(target_player_id)
+        if not target or target.player_id == player_id or target.authority <= 0 or not target.hand:
+            raise ValueError("Choose an opponent who is still in the game and has cards in hand")
+        game.pending_effect = {**game.pending_effect, 'target_player_id': target_player_id}
+        return game
+
+    def _resolve_queued_effects(self, game: GameState) -> GameState:
+        """Resume effects that fired while another interactive effect was pending."""
+        while game.queued_effects and not game.pending_effect:
+            queued = game.queued_effects.pop(0)
+            player = game.get_player(queued['player_id'])
+            if player:
+                self._execute_effect(player, queued['effect'], game)
+        return game
+
     def resolve_discard(self, game_id: str, player_id: str, target_player_id: str, instance_id: str) -> 'GameState':
         """Resolve a pending discard_card effect by choosing a card from target's hand."""
         game = self.games.get(game_id)
@@ -1377,7 +1429,7 @@ class GameService:
             data={"instance_id": instance_id, "card_name": card.name, "target_player_id": target_player_id}
         )
         game.action_log.append(action)
-        return game
+        return self._resolve_queued_effects(game)
 
     def resolve_destroy_base(self, game_id: str, player_id: str, target_player_id: str, instance_id: str) -> 'GameState':
         """Resolve a pending destroy_base effect by destroying a target opponent's base."""
