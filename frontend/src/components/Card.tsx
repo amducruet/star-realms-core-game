@@ -10,6 +10,8 @@ interface CardProps {
   clickable?: boolean;
   showScrapButton?: boolean;
   onScrap?: () => void;
+  showPlayButton?: boolean;
+  onPlay?: () => void;
   compact?: boolean;
   small?: boolean;
   enterIndex?: number;
@@ -60,7 +62,7 @@ function parseStats(text: string): ParsedStats {
   return { combat, trade, authority, remainder };
 }
 
-export function Card({ card, onClick, clickable = false, showScrapButton = false, onScrap, compact = false, small = false, enterIndex, played = false }: CardProps) {
+export function Card({ card, onClick, clickable = false, showScrapButton = false, onScrap, showPlayButton = false, onPlay, compact = false, small = false, enterIndex, played = false }: CardProps) {
   const factionColor = FACTION_COLORS[card.faction] || 'gray';
   const abilities = formatCardText(card.text);
   const canScrap = hasScrapAbility(card.text);
@@ -184,6 +186,16 @@ export function Card({ card, onClick, clickable = false, showScrapButton = false
           <span className="scrap-tooltip" role="tooltip">
             <strong>Scrap:</strong> {scrapText}
           </span>
+        </button>
+      )}
+
+      {showPlayButton && onPlay && (
+        <button
+          className="btn-play-card"
+          aria-label={`Play ${card.name}`}
+          onClick={(e) => { e.stopPropagation(); onPlay(); }}
+        >
+          Play
         </button>
       )}
     </div>

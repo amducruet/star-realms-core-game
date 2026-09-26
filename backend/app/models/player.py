@@ -32,6 +32,7 @@ class Player(BaseModel):
     faction_played_count: Dict[str, int] = Field(default_factory=dict)  # faction -> ships played this turn
     scrapped_this_turn: int = 0
     bases_settled_this_turn: bool = False
+    base_effects_resolved_this_turn: List[str] = Field(default_factory=list)
 
     class Config:
         frozen = False

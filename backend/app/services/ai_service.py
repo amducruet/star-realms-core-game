@@ -228,13 +228,16 @@ class AIService:
             target_id = pe.get('target_player_id')
             target = game.get_player(target_id) if target_id else None
             if not target:
-                opponents = [p for p in game.players if p.player_id != ai_player.player_id]
+                opponents = [p for p in game.players if p.player_id != ai_player.player_id and p.authority > 0]
                 target = next((p for p in opponents if p.hand), None)
             if not target:
                 if optional:
                     return game_service.skip_effect(game.game_id, ai_player.player_id)
                 game.pending_effect = None
                 return game
+
+            if not target_id:
+                game = game_service.select_discard_target(game.game_id, ai_player.player_id, target.player_id)
 
             if not target.is_ai:
                 return game

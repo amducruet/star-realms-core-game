@@ -302,6 +302,19 @@ class ApiService {
     return response.json();
   }
 
+  async selectDiscardTarget(gameId: string, playerId: string, targetPlayerId: string): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE}/games/${gameId}/select_discard_target`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId, target_player_id: targetPlayerId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to select discard target');
+    }
+    return response.json();
+  }
+
   async resolveDiscardAny(gameId: string, playerId: string, instanceId: string): Promise<ApiResponse> {
     const response = await fetch(`${API_BASE}/games/${gameId}/resolve_discard_any`, {
       method: 'POST',

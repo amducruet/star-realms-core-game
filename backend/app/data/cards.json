@@ -78,7 +78,7 @@
       "type": "Base",
       "faction": "Blob",
       "cost": 8,
-      "defense": null,
+      "defense": 8,
       "is_outpost": false,
       "text": "{Gain 5 Combat}\nOR Draw a card for each Blob card that you've played this turn.",
       "quantity": 1,
