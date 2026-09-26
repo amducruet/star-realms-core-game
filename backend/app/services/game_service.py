@@ -257,7 +257,13 @@ class GameService:
             card_effects = parsed.get_primary_effects() + parsed.get_ally_effects(allies)
             scrap_effects = [effect for effect in card_effects if effect.get('type') == EffectType.SCRAP_CARD]
             for index, effect in enumerate(scrap_effects):
-                effects.append((f"{card.instance_id}:{index}", card, effect))
+                # A multi-scrap ability creates one independent decision for
+                # each card it can scrap. The batch resolver reserves each
+                # selected card, so repeated entries cannot target the same
+                # card twice.
+                max_count = max(1, int(effect.get('max_count', 1)))
+                for occurrence in range(max_count):
+                    effects.append((f"{card.instance_id}:{index}:{occurrence}", card, effect))
         return effects
 
     def _batch_card_has_faction(self, card: CardInstance, faction: str, batch: dict, batch_cards: list) -> bool:
@@ -515,18 +521,44 @@ class GameService:
         for effect in ally_effects:
             self._execute_effect(player, effect, game=game)
 
+        if card.type == 'Base':
+            resolved = player.base_effects_resolved_this_turn
+            resolved.append(f'{card.instance_id}:primary')
+            if ally_count >= 1 and parsed_card.ally_ability:
+                resolved.append(f'{card.instance_id}:ally')
+            if ally_count >= 2 and parsed_card.double_ally_ability:
+                resolved.append(f'{card.instance_id}:double_ally')
+
         # Retroactively fire ally abilities on previously played cards of the same faction
         # that now have their threshold met by this new card
-        for faction in [card.faction, *card.additional_factions]:
-            if faction != 'Unaligned':
-                self._trigger_retroactive_ally(player, card, game, faction)
+        factions_to_check = [card.faction, *card.additional_factions]
+        if card.name == 'Mech World':
+            # Mech World is an ally for every faction. If it is played after
+            # faction cards, it can cross those cards' ally thresholds too.
+            for existing_card in list(player.in_play) + list(player.bases):
+                if existing_card.instance_id == card.instance_id:
+                    continue
+                factions_to_check.extend([existing_card.faction, *existing_card.additional_factions])
 
-    def _trigger_retroactive_ally(self, player: Player, new_card: CardInstance, game=None, faction: Optional[str] = None):
+        fired_ally_abilities = set()
+        for faction in dict.fromkeys(factions_to_check):
+            if faction != 'Unaligned':
+                self._trigger_retroactive_ally(player, card, game, faction, fired_ally_abilities)
+
+    def _trigger_retroactive_ally(
+        self,
+        player: Player,
+        new_card: CardInstance,
+        game=None,
+        faction: Optional[str] = None,
+        fired_ally_abilities: Optional[set] = None,
+    ):
         """
         When a new card is played, check all previously played same-faction cards
         and fire their ally/double-ally abilities if this card pushes them over threshold.
         """
         faction = faction or new_card.faction
+        fired_ally_abilities = fired_ally_abilities if fired_ally_abilities is not None else set()
         # Total allies NOW (including the new card)
         total = self._count_allies(player, faction, exclude_card=None)
         # Total allies BEFORE this card was added
@@ -546,16 +578,24 @@ class GameService:
             parsed = parse_card(existing_card.text, existing_card.faction)
 
             # Fire regular ally if threshold just crossed 0→1
-            if parsed.ally_ability and allies_before < 1 <= allies_now:
+            ally_key = (existing_card.instance_id, 'ally')
+            if parsed.ally_ability and allies_before < 1 <= allies_now and ally_key not in fired_ally_abilities:
                 print(f"  → {existing_card.name} retroactive ally triggered by {new_card.name}")
                 for effect in parsed.ally_ability.effects:
                     self._execute_effect(player, effect, game=game)
+                fired_ally_abilities.add(ally_key)
+                if existing_card.type == 'Base':
+                    player.base_effects_resolved_this_turn.append(f'{existing_card.instance_id}:ally')
 
             # Fire double ally if threshold just crossed 1→2
-            if parsed.double_ally_ability and allies_before < 2 <= allies_now:
+            double_ally_key = (existing_card.instance_id, 'double_ally')
+            if parsed.double_ally_ability and allies_before < 2 <= allies_now and double_ally_key not in fired_ally_abilities:
                 print(f"  → {existing_card.name} retroactive double-ally triggered by {new_card.name}")
                 for effect in parsed.double_ally_ability.effects:
                     self._execute_effect(player, effect, game=game)
+                fired_ally_abilities.add(double_ally_key)
+                if existing_card.type == 'Base':
+                    player.base_effects_resolved_this_turn.append(f'{existing_card.instance_id}:double_ally')
 
     def _count_allies(self, player: Player, faction: str, exclude_card: Optional[CardInstance] = None) -> int:
         """Count how many OTHER cards of the same faction are in play."""
@@ -623,11 +663,11 @@ class GameService:
                 if card.cost <= max_cost and (
                     (card_type == 'ship' and card.type != 'Base') or
                     (card_type == 'base' and card.type == 'Base') or
-                    card_type in ('ship or base', 'any')
+                    card_type in ('ship_or_base', 'ship or base', 'any')
                 )
             ]
             explorer_eligible = (
-                card_type in ('ship', 'ship or base', 'any') and
+                card_type in ('ship', 'ship_or_base', 'ship or base', 'any') and
                 bool(game.explorer_pile) and
                 game.explorer_pile[0].cost <= max_cost
             )
@@ -748,6 +788,11 @@ class GameService:
                 'type': 'discard_any_number',
                 'per_discard_effects': effect.get('per_discard_effects', []),
                 'on_complete_effects': effect.get('on_complete_effects', []),
+                'max_count': effect.get('max_count'),
+                'discarded_count': 0,
+                'draw_per_discard': effect.get('draw_per_discard', False),
+                'prompt_title': effect.get('prompt_title'),
+                'prompt_subtitle': effect.get('prompt_subtitle'),
                 'optional': True,
             }
             print(f"  → Pending discard_any_number effect")
@@ -1167,6 +1212,7 @@ class GameService:
         player.next_acquire_to_top_type = 'any'
         player.faction_played_count = {}
         player.scrapped_this_turn = 0
+        player.base_effects_resolved_this_turn.clear()
 
         # Draw new hand
         self._draw_cards(player, game.config.starting_hand_size)
@@ -1207,13 +1253,19 @@ class GameService:
             return
         print(f"🏰 Activating {len(player.bases)} base(s) for {player.name}")
         queued_effects = []
+        already_resolved = set(player.base_effects_resolved_this_turn)
         for base in list(player.bases):
             parsed = parse_card(base.text, base.faction)
-            for effect in parsed.get_primary_effects():
-                queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+            if f'{base.instance_id}:primary' not in already_resolved:
+                for effect in parsed.get_primary_effects():
+                    queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
             ally_count = self._count_allies(player, base.faction, exclude_card=base)
-            for effect in parsed.get_ally_effects(ally_count):
-                queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+            if ally_count >= 1 and parsed.ally_ability and f'{base.instance_id}:ally' not in already_resolved:
+                for effect in parsed.ally_ability.effects:
+                    queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+            if ally_count >= 2 and parsed.double_ally_ability and f'{base.instance_id}:double_ally' not in already_resolved:
+                for effect in parsed.double_ally_ability.effects:
+                    queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
         if queued_effects:
             game.base_activation = {'player_id': player.player_id, 'effects': queued_effects, 'index': 0}
             self._advance_base_activation(player, game)
@@ -1644,8 +1696,11 @@ class GameService:
         player.hand.remove(card)
         player.discard_pile.append(card)
 
+        pe = game.pending_effect
+        pe['discarded_count'] = pe.get('discarded_count', 0) + 1
         for eff in game.pending_effect.get('per_discard_effects', []):
-            self._execute_effect(player, eff, game)
+            # Resolve per-card bonuses now; the discard prompt is still active.
+            self._execute_effect(player, eff, game=None)
 
         game.action_log.append(GameAction(
             action_id=str(uuid.uuid4()),
@@ -1654,6 +1709,9 @@ class GameService:
             timestamp=time.time(),
             data={"card_name": card.name, "reason": "discard_any"}
         ))
+        max_count = pe.get('max_count')
+        if max_count is not None and pe['discarded_count'] >= max_count:
+            return self.finish_discard_any(game_id, player_id)
         return game
 
     def finish_discard_any(self, game_id: str, player_id: str) -> 'GameState':
@@ -1669,6 +1727,9 @@ class GameService:
 
         pe = game.pending_effect
         game.pending_effect = None
+
+        if pe.get('draw_per_discard'):
+            self._draw_cards(player, pe.get('discarded_count', 0))
 
         for eff in pe.get('on_complete_effects', []):
             self._execute_effect(player, eff, game)

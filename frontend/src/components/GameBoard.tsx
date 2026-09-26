@@ -305,6 +305,17 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     }
   };
 
+  const handlePlayCard = async (card: CardInstance) => {
+    if (!currentPlayerId || !isMyTurn || gameState.pending_effect || gameState.play_batch || gameState.base_activation) return;
+    try {
+      const response = await api.playCard(gameState.game_id, currentPlayerId, card.instance_id);
+      if (response.game) onGameUpdate(response.game);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to play ${card.name}`);
+    }
+  };
+
   const handleSelectDiscardTarget = async (targetPlayerId: string) => {
     if (!currentPlayerId) return;
     try {
@@ -437,6 +448,17 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
     && gameState.pending_effect?.location === 'trade_row'
     ? gameState.pending_effect
     : null;
+  const freeAcquireEffect = isMyTurn && gameState.pending_effect?.type === 'acquire_free_to_top'
+    ? gameState.pending_effect
+    : null;
+  const eligibleFreeAcquireIds = freeAcquireEffect
+    ? gameState.trade_row
+        .filter(card => card.cost <= (freeAcquireEffect.max_cost ?? 999) && (
+          freeAcquireEffect.card_type === 'ship' ? card.type !== 'Base' :
+          freeAcquireEffect.card_type === 'base' ? card.type === 'Base' : true
+        ))
+        .map(card => card.instance_id)
+    : [];
 
   return (
     <div className="game-board">
@@ -466,6 +488,14 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
             )}
           </div>
         )}
+        {freeAcquireEffect && eligibleFreeAcquireIds.length > 0 && (
+          <div className="trade-row-acquire-prompt" role="status">
+            <div>
+              <strong>Choose a free card for the top of your deck</strong>
+              <span>Select an eligible ship or base from the Trade Row.</span>
+            </div>
+          </div>
+        )}
         <TradeRow
           tradeRow={gameState.trade_row}
           explorerPile={gameState.explorer_pile}
@@ -479,6 +509,10 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
               : undefined
           }
           eligibleScrapIds={tradeRowScrapEffect?.eligible_instance_ids}
+          onAcquireFreeSelect={freeAcquireEffect && eligibleFreeAcquireIds.length > 0
+            ? card => handleResolveAcquireFree(card)
+            : undefined}
+          eligibleAcquireIds={eligibleFreeAcquireIds}
         />
       </div>
 
@@ -516,7 +550,9 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
             maxAuthority={gameState.config.starting_authority}
             onScrapCard={handleScrapCard}
             onPlayHand={handlePlayHand}
+            onPlayCard={handlePlayCard}
             canPlayHand={isMyTurn && !gameState.pending_effect && !gameState.play_batch && !gameState.base_activation}
+            canPlayCard={isMyTurn && !gameState.pending_effect && !gameState.play_batch && !gameState.base_activation}
             onEndTurn={handleEndTurn}
             onDistributeDamage={() => setShowDamageDistributor(true)}
             launching={launchingFleet}
@@ -674,6 +710,9 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
           );
           const explorerOk = cardType !== 'base' && gameState.explorer_pile.length > 0 && gameState.explorer_pile[0].cost <= maxCost;
           const allCards = explorerOk ? [...eligible, gameState.explorer_pile[0]] : eligible;
+          // Let the player select eligible trade-row cards in place. Keep the
+          // picker for the Explorer pile when the row has no eligible target.
+          if (eligible.length > 0) return null;
           return (
             <CardPicker
               title="Acquire for Free"
@@ -690,8 +729,8 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
         if (pe.type === 'discard_any_number') {
           return (
             <CardPicker
-              title="Discard for Combat"
-              subtitle="Click cards to discard them (+2 Combat each). Click Skip when finished."
+              title={pe.prompt_title ?? 'Discard Cards'}
+              subtitle={pe.prompt_subtitle ?? 'Choose cards to discard. Click Skip when finished.'}
               cards={currentPlayer.hand}
               onSelect={handleResolveDiscardAny}
               onSkip={handleFinishDiscardAny}

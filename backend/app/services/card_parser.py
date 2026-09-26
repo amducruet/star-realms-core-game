@@ -131,6 +131,25 @@ class ParsedAbility:
             self.effects.append({'type': EffectType.GAIN_COMBAT_PER_SCRAPPED, 'amount': int(scrapped_turn_m.group(1))})
             return
 
+        # "Discard up to N cards, then draw that many cards" (Recycling Station).
+        discard_draw_m = re.search(
+            r'discard\s+up\s+to\s+(\d+|one|two|three|four)\s+cards?,?\s*then\s*draw\s+that\s+many\s+cards?',
+            text, re.IGNORECASE
+        )
+        if discard_draw_m:
+            count_word = discard_draw_m.group(1).lower()
+            count = {'one': 1, 'two': 2, 'three': 3, 'four': 4}.get(
+                count_word, int(count_word) if count_word.isdigit() else 1
+            )
+            self.effects.append({
+                'type': EffectType.DISCARD_ANY_NUMBER,
+                'max_count': count,
+                'draw_per_discard': True,
+                'prompt_title': 'Discard Cards',
+                'prompt_subtitle': f'Discard up to {count} cards, then draw the same number.',
+            })
+            return
+
         # "discard any number of cards and gain {X Combat} for each"
         discard_any_m = re.search(
             r'discard any number of cards and gain\s+\{(\d+)\s+Combat\}\s+for each',

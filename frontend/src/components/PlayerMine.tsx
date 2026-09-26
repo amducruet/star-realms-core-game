@@ -11,13 +11,15 @@ interface PlayerMineProps {
   maxAuthority: number;
   onScrapCard: (card: CardInstance) => void;
   onPlayHand: () => void;
+  onPlayCard: (card: CardInstance) => void;
   canPlayHand: boolean;
+  canPlayCard: boolean;
   onEndTurn: () => void;
   onDistributeDamage: () => void;
   launching?: boolean;
 }
 
-export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, onScrapCard, onPlayHand, canPlayHand, onEndTurn, onDistributeDamage, launching = false }: PlayerMineProps) {
+export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, onScrapCard, onPlayHand, onPlayCard, canPlayHand, canPlayCard, onEndTurn, onDistributeDamage, launching = false }: PlayerMineProps) {
   return (
     <div className="combat-mine-section" data-mine={currentPlayer.player_id}>
       <AuthorityBar player={currentPlayer} maxAuthority={maxAuthority} />
@@ -67,7 +69,7 @@ export function PlayerMine({ currentPlayer, isMyTurn, opponents, maxAuthority, o
               <span className="combat-section-label">Hand — Not played</span>
               <div className="combat-cards">
                 {currentPlayer.hand.map((card, i) => (
-                  <Card key={card.instance_id} card={card} small showScrapButton={isMyTurn && canPlayHand} onScrap={() => onScrapCard(card)} enterIndex={i} />
+                  <Card key={card.instance_id} card={card} small showPlayButton={canPlayCard} onPlay={() => onPlayCard(card)} showScrapButton={isMyTurn && canPlayCard} onScrap={() => onScrapCard(card)} enterIndex={i} />
                 ))}
               </div>
             </div>

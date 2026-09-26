@@ -40,8 +40,9 @@ export function formatCardText(text: string): FormattedAbility[] {
         type: 'scrap',
       });
     }
-    // Double ally
-    else if (section.toLowerCase().includes('double') && section.toLowerCase().includes('ally')) {
+    // Double ally abilities have an explicit faction header. Do not classify
+    // ordinary rules text such as "counts as an ally for all factions" as one.
+    else if (/Double\s+(Trade Federation|Machine Cult|Star Empire|Blob)\s+Ally\s*:/i.test(section)) {
       const match = section.match(/^(.*?)\s*Double\s+(Trade Federation|Machine Cult|Star Empire|Blob)\s+Ally:?\s*(.*)/i);
       if (match) {
         const prefix = match[1].trim();
@@ -58,7 +59,7 @@ export function formatCardText(text: string): FormattedAbility[] {
       }
     }
     // Regular ally
-    else if (section.toLowerCase().includes('ally')) {
+    else if (/(Trade Federation|Machine Cult|Star Empire|Blob)\s+Ally\s*:/i.test(section)) {
       const match = section.match(/^(.*?)\s*(Trade Federation|Machine Cult|Star Empire|Blob)\s+Ally:?\s*(.*)/i);
       if (match) {
         const prefix = match[1].trim();
