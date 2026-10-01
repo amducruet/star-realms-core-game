@@ -433,13 +433,16 @@ export function GameBoard({ gameState, currentPlayerId, onGameUpdate, attackEven
   if (gameState.phase === 'ended') {
     const winner = gameState.players.find((p) => p.player_id === gameState.winner_id);
     return (
-      <div className="game-over">
-        <h2>🎉 Game Over!</h2>
-        <p className="winner">{winner?.name} Wins!</p>
-        <button className="btn-primary" onClick={() => window.location.reload()}>
-          New Game
-        </button>
-      </div>
+      <section className="game-over" role="status" aria-live="polite">
+        <div className="game-over-card">
+          <span className="game-over-kicker">Match complete</span>
+          <h2>Game Over</h2>
+          <p className="winner">{winner ? `${winner.name} wins!` : 'The game has ended'}</p>
+          <button className="btn-primary" onClick={() => window.location.reload()}>
+            New Game
+          </button>
+        </div>
+      </section>
     );
   }
 
