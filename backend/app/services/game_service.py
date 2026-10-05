@@ -257,7 +257,13 @@ class GameService:
             card_effects = parsed.get_primary_effects() + parsed.get_ally_effects(allies)
             scrap_effects = [effect for effect in card_effects if effect.get('type') == EffectType.SCRAP_CARD]
             for index, effect in enumerate(scrap_effects):
-                effects.append((f"{card.instance_id}:{index}", card, effect))
+                # A multi-scrap ability creates one independent decision for
+                # each card it can scrap. The batch resolver reserves each
+                # selected card, so repeated entries cannot target the same
+                # card twice.
+                max_count = max(1, int(effect.get('max_count', 1)))
+                for occurrence in range(max_count):
+                    effects.append((f"{card.instance_id}:{index}:{occurrence}", card, effect))
         return effects
 
     def _batch_card_has_faction(self, card: CardInstance, faction: str, batch: dict, batch_cards: list) -> bool:
@@ -353,6 +359,9 @@ class GameService:
                 card = self._remove_scrap_target(player, game, decision['instance_id'], decision['location'])
                 game.scrap_heap.append(card)
                 player.scrapped_this_turn += 1
+                scrap_effect = active[key][1]
+                if scrap_effect.get('gain_cost_as_combat'):
+                    player.combat += card.cost
                 if decision['location'] == 'hand':
                     parsed = parse_card(card.text, card.faction)
                     for scrap_effect in parsed.get_scrap_effects():
@@ -512,18 +521,44 @@ class GameService:
         for effect in ally_effects:
             self._execute_effect(player, effect, game=game)
 
+        if card.type == 'Base':
+            resolved = player.base_effects_resolved_this_turn
+            resolved.append(f'{card.instance_id}:primary')
+            if ally_count >= 1 and parsed_card.ally_ability:
+                resolved.append(f'{card.instance_id}:ally')
+            if ally_count >= 2 and parsed_card.double_ally_ability:
+                resolved.append(f'{card.instance_id}:double_ally')
+
         # Retroactively fire ally abilities on previously played cards of the same faction
         # that now have their threshold met by this new card
-        for faction in [card.faction, *card.additional_factions]:
-            if faction != 'Unaligned':
-                self._trigger_retroactive_ally(player, card, game, faction)
+        factions_to_check = [card.faction, *card.additional_factions]
+        if card.name == 'Mech World':
+            # Mech World is an ally for every faction. If it is played after
+            # faction cards, it can cross those cards' ally thresholds too.
+            for existing_card in list(player.in_play) + list(player.bases):
+                if existing_card.instance_id == card.instance_id:
+                    continue
+                factions_to_check.extend([existing_card.faction, *existing_card.additional_factions])
 
-    def _trigger_retroactive_ally(self, player: Player, new_card: CardInstance, game=None, faction: Optional[str] = None):
+        fired_ally_abilities = set()
+        for faction in dict.fromkeys(factions_to_check):
+            if faction != 'Unaligned':
+                self._trigger_retroactive_ally(player, card, game, faction, fired_ally_abilities)
+
+    def _trigger_retroactive_ally(
+        self,
+        player: Player,
+        new_card: CardInstance,
+        game=None,
+        faction: Optional[str] = None,
+        fired_ally_abilities: Optional[set] = None,
+    ):
         """
         When a new card is played, check all previously played same-faction cards
         and fire their ally/double-ally abilities if this card pushes them over threshold.
         """
         faction = faction or new_card.faction
+        fired_ally_abilities = fired_ally_abilities if fired_ally_abilities is not None else set()
         # Total allies NOW (including the new card)
         total = self._count_allies(player, faction, exclude_card=None)
         # Total allies BEFORE this card was added
@@ -543,16 +578,24 @@ class GameService:
             parsed = parse_card(existing_card.text, existing_card.faction)
 
             # Fire regular ally if threshold just crossed 0→1
-            if parsed.ally_ability and allies_before < 1 <= allies_now:
+            ally_key = (existing_card.instance_id, 'ally')
+            if parsed.ally_ability and allies_before < 1 <= allies_now and ally_key not in fired_ally_abilities:
                 print(f"  → {existing_card.name} retroactive ally triggered by {new_card.name}")
                 for effect in parsed.ally_ability.effects:
                     self._execute_effect(player, effect, game=game)
+                fired_ally_abilities.add(ally_key)
+                if existing_card.type == 'Base':
+                    player.base_effects_resolved_this_turn.append(f'{existing_card.instance_id}:ally')
 
             # Fire double ally if threshold just crossed 1→2
-            if parsed.double_ally_ability and allies_before < 2 <= allies_now:
+            double_ally_key = (existing_card.instance_id, 'double_ally')
+            if parsed.double_ally_ability and allies_before < 2 <= allies_now and double_ally_key not in fired_ally_abilities:
                 print(f"  → {existing_card.name} retroactive double-ally triggered by {new_card.name}")
                 for effect in parsed.double_ally_ability.effects:
                     self._execute_effect(player, effect, game=game)
+                fired_ally_abilities.add(double_ally_key)
+                if existing_card.type == 'Base':
+                    player.base_effects_resolved_this_turn.append(f'{existing_card.instance_id}:double_ally')
 
     def _count_allies(self, player: Player, faction: str, exclude_card: Optional[CardInstance] = None) -> int:
         """Count how many OTHER cards of the same faction are in play."""
@@ -575,6 +618,9 @@ class GameService:
 
     def _execute_effect(self, player: Player, effect: Dict[str, Any], game=None):
         """Execute a single card effect."""
+        if game is not None and game.pending_effect:
+            game.queued_effects.append({'player_id': player.player_id, 'effect': effect})
+            return
         effect_type = effect.get('type')
 
         if effect_type == EffectType.GAIN_COMBAT:
@@ -597,6 +643,13 @@ class GameService:
             self._draw_cards(player, amount)
             print(f"  → Drew {amount} card(s)")
 
+        elif effect_type == EffectType.RETURN_SCRAPPED_CARD and game is not None:
+            game.end_of_turn_effects.append({
+                'player_id': player.player_id,
+                'instance_id': effect.get('source_instance_id'),
+                'card_name': effect.get('card_name'),
+            })
+
         elif effect_type == EffectType.NEXT_ACQUIRE_TO_TOP:
             player.next_acquire_to_top = True
             player.next_acquire_to_top_type = effect.get('card_type', 'any')
@@ -610,16 +663,17 @@ class GameService:
                 if card.cost <= max_cost and (
                     (card_type == 'ship' and card.type != 'Base') or
                     (card_type == 'base' and card.type == 'Base') or
-                    card_type in ('ship or base', 'any')
+                    card_type in ('ship_or_base', 'ship or base', 'any')
                 )
             ]
             explorer_eligible = (
-                card_type in ('ship', 'ship or base', 'any') and
+                card_type in ('ship', 'ship_or_base', 'ship or base', 'any') and
                 bool(game.explorer_pile) and
                 game.explorer_pile[0].cost <= max_cost
             )
             if not eligible and not explorer_eligible:
                 return
+
             game.pending_effect = {
                 'type': 'acquire_free_to_top',
                 'card_type': card_type,
@@ -693,10 +747,8 @@ class GameService:
                     if candidate.player_id != player.player_id and candidate.authority > 0 and candidate.hand
                 ]
                 has_target = bool(targets)
-                # Star Realms is normally two-player. Keeping the selected
-                # target on the pending effect also prevents another client
-                # from answering this player's discard choice.
-                target_player_id = targets[0].player_id if targets else None
+                # Let the attacker choose which opponent receives the discard.
+                target_player_id = None
             if not has_target:
                 return
             game.pending_effect = {
@@ -736,6 +788,11 @@ class GameService:
                 'type': 'discard_any_number',
                 'per_discard_effects': effect.get('per_discard_effects', []),
                 'on_complete_effects': effect.get('on_complete_effects', []),
+                'max_count': effect.get('max_count'),
+                'discarded_count': 0,
+                'draw_per_discard': effect.get('draw_per_discard', False),
+                'prompt_title': effect.get('prompt_title'),
+                'prompt_subtitle': effect.get('prompt_subtitle'),
                 'optional': True,
             }
             print(f"  → Pending discard_any_number effect")
@@ -1078,6 +1135,8 @@ class GameService:
         scrap_effects = parsed_card.get_scrap_effects()
         print(f"  🗑️ Scrapping {card.name}")
         for effect in scrap_effects:
+            if effect.get('type') == EffectType.RETURN_SCRAPPED_CARD:
+                effect = {**effect, 'source_instance_id': card.instance_id}
             self._execute_effect(player, effect, game=game)
 
         # Log action
@@ -1122,6 +1181,18 @@ class GameService:
         if game.base_activation:
             raise ValueError("Must finish activating your bases")
 
+        # Resolve delayed effects while this player is still the active player.
+        due_effects = [e for e in game.end_of_turn_effects if e.get('player_id') == player_id]
+        game.end_of_turn_effects = [e for e in game.end_of_turn_effects if e.get('player_id') != player_id]
+        for effect in due_effects:
+            card = next(
+                (c for c in game.scrap_heap if c.instance_id == effect.get('instance_id')),
+                None,
+            )
+            if card is not None:
+                game.scrap_heap.remove(card)
+                player.discard_pile.append(card)
+
         # Discard hand and played cards
         for card in list(player.hand) + list(player.in_play) + list(player.bases):
             card.additional_factions.clear()
@@ -1141,6 +1212,7 @@ class GameService:
         player.next_acquire_to_top_type = 'any'
         player.faction_played_count = {}
         player.scrapped_this_turn = 0
+        player.base_effects_resolved_this_turn.clear()
 
         # Draw new hand
         self._draw_cards(player, game.config.starting_hand_size)
@@ -1181,13 +1253,19 @@ class GameService:
             return
         print(f"🏰 Activating {len(player.bases)} base(s) for {player.name}")
         queued_effects = []
+        already_resolved = set(player.base_effects_resolved_this_turn)
         for base in list(player.bases):
             parsed = parse_card(base.text, base.faction)
-            for effect in parsed.get_primary_effects():
-                queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+            if f'{base.instance_id}:primary' not in already_resolved:
+                for effect in parsed.get_primary_effects():
+                    queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
             ally_count = self._count_allies(player, base.faction, exclude_card=base)
-            for effect in parsed.get_ally_effects(ally_count):
-                queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+            if ally_count >= 1 and parsed.ally_ability and f'{base.instance_id}:ally' not in already_resolved:
+                for effect in parsed.ally_ability.effects:
+                    queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
+            if ally_count >= 2 and parsed.double_ally_ability and f'{base.instance_id}:double_ally' not in already_resolved:
+                for effect in parsed.double_ally_ability.effects:
+                    queued_effects.append({'base_id': base.instance_id, 'base_name': base.name, 'effect': effect})
         if queued_effects:
             game.base_activation = {'player_id': player.player_id, 'effects': queued_effects, 'index': 0}
             self._advance_base_activation(player, game)
@@ -1326,6 +1404,32 @@ class GameService:
         game.action_log.append(action)
         return game
 
+    def select_discard_target(self, game_id: str, player_id: str, target_player_id: str) -> GameState:
+        """Choose which opponent must discard for the current pending effect."""
+        game = self.games.get(game_id)
+        if not game:
+            raise ValueError(f"Game {game_id} not found")
+        if not game.pending_effect or game.pending_effect.get('type') != 'discard_card':
+            raise ValueError("No pending discard effect")
+        if game.pending_effect.get('target') != 'opponent':
+            raise ValueError("This discard effect does not target an opponent")
+        if not game.current_player or game.current_player.player_id != player_id:
+            raise ValueError("Only the current player can choose the discard target")
+        target = game.get_player(target_player_id)
+        if not target or target.player_id == player_id or target.authority <= 0 or not target.hand:
+            raise ValueError("Choose an opponent who is still in the game and has cards in hand")
+        game.pending_effect = {**game.pending_effect, 'target_player_id': target_player_id}
+        return game
+
+    def _resolve_queued_effects(self, game: GameState) -> GameState:
+        """Resume effects that fired while another interactive effect was pending."""
+        while game.queued_effects and not game.pending_effect:
+            queued = game.queued_effects.pop(0)
+            player = game.get_player(queued['player_id'])
+            if player:
+                self._execute_effect(player, queued['effect'], game)
+        return game
+
     def resolve_discard(self, game_id: str, player_id: str, target_player_id: str, instance_id: str) -> 'GameState':
         """Resolve a pending discard_card effect by choosing a card from target's hand."""
         game = self.games.get(game_id)
@@ -1377,7 +1481,7 @@ class GameService:
             data={"instance_id": instance_id, "card_name": card.name, "target_player_id": target_player_id}
         )
         game.action_log.append(action)
-        return game
+        return self._resolve_queued_effects(game)
 
     def resolve_destroy_base(self, game_id: str, player_id: str, target_player_id: str, instance_id: str) -> 'GameState':
         """Resolve a pending destroy_base effect by destroying a target opponent's base."""
@@ -1592,8 +1696,11 @@ class GameService:
         player.hand.remove(card)
         player.discard_pile.append(card)
 
+        pe = game.pending_effect
+        pe['discarded_count'] = pe.get('discarded_count', 0) + 1
         for eff in game.pending_effect.get('per_discard_effects', []):
-            self._execute_effect(player, eff, game)
+            # Resolve per-card bonuses now; the discard prompt is still active.
+            self._execute_effect(player, eff, game=None)
 
         game.action_log.append(GameAction(
             action_id=str(uuid.uuid4()),
@@ -1602,6 +1709,9 @@ class GameService:
             timestamp=time.time(),
             data={"card_name": card.name, "reason": "discard_any"}
         ))
+        max_count = pe.get('max_count')
+        if max_count is not None and pe['discarded_count'] >= max_count:
+            return self.finish_discard_any(game_id, player_id)
         return game
 
     def finish_discard_any(self, game_id: str, player_id: str) -> 'GameState':
@@ -1617,6 +1727,9 @@ class GameService:
 
         pe = game.pending_effect
         game.pending_effect = None
+
+        if pe.get('draw_per_discard'):
+            self._draw_cards(player, pe.get('discarded_count', 0))
 
         for eff in pe.get('on_complete_effects', []):
             self._execute_effect(player, eff, game)

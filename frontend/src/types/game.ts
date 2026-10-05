@@ -77,6 +77,10 @@ export interface GameState {
     max_cost?: number;
     per_discard_effects?: any[];
     on_complete_effects?: any[];
+    discarded_count?: number;
+    draw_per_discard?: boolean;
+    prompt_title?: string;
+    prompt_subtitle?: string;
     batch_scrap?: boolean;
     source_name?: string;
     eligible_instance_ids?: string[];

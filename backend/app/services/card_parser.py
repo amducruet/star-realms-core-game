@@ -26,6 +26,7 @@ class EffectType(str, Enum):
     DRAW_PER_FACTION_PLAYED = "draw_per_faction_played"    # × faction_played_count[faction]
     DISCARD_ANY_NUMBER = "discard_any_number"              # discard N cards, gain per each
     COPY_SHIP = "copy_ship"                                # copy another ship played this turn
+    RETURN_SCRAPPED_CARD = "return_scrapped_card"          # return this card from the scrap heap at end of turn
 
 
 class ParsedAbility:
@@ -130,6 +131,25 @@ class ParsedAbility:
             self.effects.append({'type': EffectType.GAIN_COMBAT_PER_SCRAPPED, 'amount': int(scrapped_turn_m.group(1))})
             return
 
+        # "Discard up to N cards, then draw that many cards" (Recycling Station).
+        discard_draw_m = re.search(
+            r'discard\s+up\s+to\s+(\d+|one|two|three|four)\s+cards?,?\s*then\s*draw\s+that\s+many\s+cards?',
+            text, re.IGNORECASE
+        )
+        if discard_draw_m:
+            count_word = discard_draw_m.group(1).lower()
+            count = {'one': 1, 'two': 2, 'three': 3, 'four': 4}.get(
+                count_word, int(count_word) if count_word.isdigit() else 1
+            )
+            self.effects.append({
+                'type': EffectType.DISCARD_ANY_NUMBER,
+                'max_count': count,
+                'draw_per_discard': True,
+                'prompt_title': 'Discard Cards',
+                'prompt_subtitle': f'Discard up to {count} cards, then draw the same number.',
+            })
+            return
+
         # "discard any number of cards and gain {X Combat} for each"
         discard_any_m = re.search(
             r'discard any number of cards and gain\s+\{(\d+)\s+Combat\}\s+for each',
@@ -178,6 +198,17 @@ class ParsedAbility:
             m = match.lower()
             amount = word_to_num.get(m, int(m) if m.isdigit() else 1)
             self.effects.append({'type': EffectType.DRAW_CARDS, 'amount': amount})
+
+        # "At end of turn, move [this card] from the scrap heap to your discard pile"
+        return_scrapped_card = re.search(
+            r'at end of turn,?\s*move\s+(.+?)\s+from the scrap heap to your discard pile',
+            text, re.IGNORECASE
+        )
+        if return_scrapped_card:
+            self.effects.append({
+                'type': EffectType.RETURN_SCRAPPED_CARD,
+                'card_name': return_scrapped_card.group(1).strip(),
+            })
 
         # Extract self-discard effects ("then discard a card", "discard a card")
         # Distinct from opponent-discard — targets self
@@ -338,6 +369,9 @@ class ParsedCard:
             elif '{double' in section.lower() and 'ally}' in section.lower():
                 match = re.search(r'\{Double\s+[^}]+\s+Ally\}:?\s*(.*)', section, re.IGNORECASE | re.DOTALL)
                 if match:
+                    primary_text = section[:match.start()].strip()
+                    if primary_text and not self.primary_ability:
+                        self.primary_ability = ParsedAbility(primary_text)
                     ability_text = match.group(1).strip()
                     self.double_ally_ability = ParsedAbility(ability_text)
 
@@ -345,6 +379,9 @@ class ParsedCard:
             elif 'ally}' in section.lower():
                 match = re.search(r'\{[^}]+\s+Ally\}:?\s*(.*)', section, re.IGNORECASE | re.DOTALL)
                 if match:
+                    primary_text = section[:match.start()].strip()
+                    if primary_text and not self.primary_ability:
+                        self.primary_ability = ParsedAbility(primary_text)
                     ability_text = match.group(1).strip()
                     self.ally_ability = ParsedAbility(ability_text)
 

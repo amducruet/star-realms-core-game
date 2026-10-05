@@ -56,12 +56,16 @@ class GameState(BaseModel):
     trade_deck: List[CardInstance] = Field(default_factory=list)
     explorer_pile: List[CardInstance] = Field(default_factory=list)
     scrap_heap: List[CardInstance] = Field(default_factory=list)
+    # Effects that resolve after the current player's end-of-turn cleanup.
+    end_of_turn_effects: List[dict] = Field(default_factory=list)
 
     # Action log for animations (Phase 2)
     action_log: List[GameAction] = Field(default_factory=list)
 
     # Pending interactive effect waiting for player resolution
     pending_effect: Optional[dict] = None
+    # Card effects triggered behind an interactive effect, resolved in order.
+    queued_effects: List[dict] = Field(default_factory=list)
     # Transient state for two-phase, order-independent hand play.
     play_batch: Optional[dict] = None
     base_activation: Optional[dict] = None
