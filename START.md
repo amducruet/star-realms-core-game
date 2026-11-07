@@ -135,4 +135,4 @@ npm install
 - Add sound effects
 - Improve UI/UX
 
-Enjoy playing Star Realms! 🌟
+Have fun playing Star Realms! 🌟 
